@@ -9,36 +9,59 @@ if(!isset($_SESSION['admin']))
 }
 
 include("../config/database.php");
-require_once("../includes/daily-rider-reset.php");
 require_once("../includes/face-recognition.php");
+// Sa riders.php, pagkatapos ng database include:
+require_once("../includes/global-alerts.php");
 
-function riders_face_preview_src($face_data)
-{
-    $parsed = face_parse_stored_data($face_data);
-    if ($parsed && !empty($parsed['image'])) {
-        return $parsed['image'];
-    }
+// Kunin ang alerts
+$perimeter_data = getPerimeterAlerts($conn);
+$map_alert_count = $perimeter_data['count'];
 
-    $face_data = trim((string)$face_data);
-    if (strpos($face_data, 'data:image') === 0) {
-        return $face_data;
-    }
+// ================================================================
+// E-BIKE ID MANAGEMENT - Smart assignment
+// ================================================================
 
-    return '';
-}
-
-$auto_reset_result = maybe_run_daily_rider_reset($conn);
-
+/**
+ * Get the next available E-Bike ID (reuses missing IDs)
+ * This finds the lowest missing ID in the sequence
+ * 
+ * @param mysqli $conn Database connection
+ * @return string Next available E-Bike ID (3-digit padded)
+ */
 function get_next_ebike_id($conn)
 {
+    // Get all existing numeric E-Bike IDs
     $result = $conn->query("
-        SELECT MAX(CAST(ebike_id AS UNSIGNED)) AS max_id
+        SELECT CAST(ebike_id AS UNSIGNED) AS num
         FROM users
-        WHERE role = 'rider' AND ebike_id IS NOT NULL AND ebike_id REGEXP '^[0-9]+$'
+        WHERE role = 'rider' 
+          AND ebike_id IS NOT NULL 
+          AND ebike_id REGEXP '^[0-9]+$'
+        ORDER BY num ASC
     ");
-    $row  = $result->fetch_assoc();
-    $next = ((int)($row['max_id'] ?? 0)) + 1;
-    return str_pad((string)$next, 3, '0', STR_PAD_LEFT);
+    
+    $existing_ids = [];
+    while ($row = $result->fetch_assoc()) {
+        $existing_ids[] = (int)$row['num'];
+    }
+    
+    // If no existing IDs, start with 1
+    if (empty($existing_ids)) {
+        return '001';
+    }
+    
+    // Find the first missing number in the sequence
+    $expected = 1;
+    foreach ($existing_ids as $id) {
+        if ($id > $expected) {
+            // Found a gap - use the missing number
+            return str_pad((string)$expected, 3, '0', STR_PAD_LEFT);
+        }
+        $expected = $id + 1;
+    }
+    
+    // No gaps found - use the next number
+    return str_pad((string)$expected, 3, '0', STR_PAD_LEFT);
 }
 
 function backfill_missing_ebike_ids($conn)
@@ -59,13 +82,217 @@ function backfill_missing_ebike_ids($conn)
     }
 }
 
-backfill_missing_ebike_ids($conn);
+// ================================================================
+// ESP32 DEVICE AUTO-ASSIGNMENT
+// DEVICE_ID + API_TOKEN let the ESP32 authenticate to device-gps-update.php
+// ================================================================
+
+function assign_device_for_rider($conn, $rider_id)
+{
+    $stmt = $conn->prepare("
+        SELECT u.id, u.ebike_id, d.device_id, d.api_token
+        FROM users u
+        LEFT JOIN devices d ON d.rider_id = u.id
+        WHERE u.id = ? AND u.role = 'rider' AND u.status = 'approved'
+        LIMIT 1
+    ");
+    $stmt->bind_param('i', $rider_id);
+    $stmt->execute();
+    $rider = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$rider) {
+        return null;
+    }
+
+    if (!empty($rider['device_id']) && !empty($rider['api_token'])) {
+        return [
+            'device_id' => $rider['device_id'],
+            'api_token' => $rider['api_token'],
+            'created'   => false,
+        ];
+    }
+
+    $ebike_num = preg_replace('/\D/', '', (string)($rider['ebike_id'] ?? ''));
+    if ($ebike_num === '') {
+        $ebike_num = (string)$rider_id;
+    }
+    $device_id = 'EBIKE' . str_pad($ebike_num, 4, '0', STR_PAD_LEFT);
+    $api_token = bin2hex(random_bytes(16));
+
+    $stmt = $conn->prepare("
+        INSERT INTO devices (rider_id, device_id, api_token)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE device_id = VALUES(device_id), api_token = VALUES(api_token)
+    ");
+    $stmt->bind_param('iss', $rider_id, $device_id, $api_token);
+    $stmt->execute();
+    $stmt->close();
+
+    return [
+        'device_id' => $device_id,
+        'api_token' => $api_token,
+        'created'   => true,
+    ];
+}
+
+function backfill_missing_devices($conn)
+{
+    $result = $conn->query("
+        SELECT u.id
+        FROM users u
+        LEFT JOIN devices d ON d.rider_id = u.id
+        WHERE u.role = 'rider' AND u.status = 'approved' AND d.id IS NULL
+    ");
+
+    while ($row = $result->fetch_assoc()) {
+        assign_device_for_rider($conn, (int)$row['id']);
+    }
+}
+
+// ================================================================
+// AUTO-DELETE SCHEDULING
+// ================================================================
+
+/**
+ * Get the auto-delete schedule time
+ * 
+ * @param mysqli $conn Database connection
+ * @return string|null Scheduled time in 24-hour format (HH:MM) or null if not set
+ */
+function get_scheduled_delete_time($conn)
+{
+    $result = $conn->query("
+        SELECT setting_value 
+        FROM system_settings 
+        WHERE setting_key = 'auto_delete_time'
+        LIMIT 1
+    ");
+    
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        return $row['setting_value'];
+    }
+    
+    return null;
+}
+
+/**
+ * Set the auto-delete schedule time
+ * 
+ * @param mysqli $conn Database connection
+ * @param string $time Time in 24-hour format (HH:MM)
+ * @return bool Success
+ */
+function set_scheduled_delete_time($conn, $time)
+{
+    // Validate time format
+    if (!preg_match('/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+        return false;
+    }
+    
+    $stmt = $conn->prepare("
+        INSERT INTO system_settings (setting_key, setting_value) 
+        VALUES ('auto_delete_time', ?) 
+        ON DUPLICATE KEY UPDATE setting_value = ?
+    ");
+    $stmt->bind_param('ss', $time, $time);
+    $result = $stmt->execute();
+    $stmt->close();
+    
+    return $result;
+}
+
+/**
+ * Check if auto-delete should run and execute it
+ * 
+ * @param mysqli $conn Database connection
+ * @return array Result with success and message
+ */
+function check_and_run_auto_delete($conn)
+{
+    $scheduled_time = get_scheduled_delete_time($conn);
+    
+    if (!$scheduled_time) {
+        return ['success' => false, 'message' => 'No auto-delete time set'];
+    }
+    
+    // Get current time
+    $now = new DateTime('now', new DateTimeZone('Asia/Manila'));
+    $current_time = $now->format('H:i');
+    
+    // Check if we should run (within 1 minute of scheduled time)
+    $time_diff = abs(strtotime($current_time) - strtotime($scheduled_time));
+    
+    if ($time_diff > 60) {
+        return ['success' => false, 'message' => 'Not yet time for auto-delete'];
+    }
+    
+    // Check if already ran today
+    $last_run = $conn->query("
+        SELECT setting_value 
+        FROM system_settings 
+        WHERE setting_key = 'auto_delete_last_run'
+        LIMIT 1
+    ");
+    
+    if ($last_run && $last_run->num_rows > 0) {
+        $last_run_date = $last_run->fetch_assoc()['setting_value'];
+        if ($last_run_date === date('Y-m-d')) {
+            return ['success' => false, 'message' => 'Auto-delete already ran today'];
+        }
+    }
+    
+    // ================================================================
+    // EXECUTE AUTO-DELETE
+    // ================================================================
+    
+    // Delete all riders and related GPS data (scheduler-controlled reset)
+    $conn->query("DELETE FROM gps_logs");
+    $conn->query("DELETE FROM users WHERE role = 'rider'");
+    
+    // Reset E-Bike ID sequence
+    $conn->query("
+        ALTER TABLE users AUTO_INCREMENT = 1
+    ");
+    
+    // Record that we ran today
+    $stmt = $conn->prepare("
+        INSERT INTO system_settings (setting_key, setting_value) 
+        VALUES ('auto_delete_last_run', ?) 
+        ON DUPLICATE KEY UPDATE setting_value = ?
+    ");
+    $today = date('Y-m-d');
+    $stmt->bind_param('ss', $today, $today);
+    $stmt->execute();
+    $stmt->close();
+    
+    return [
+        'success' => true, 
+        'message' => 'Auto-delete completed at ' . date('h:i A')
+    ];
+}
+
+// ================================================================
+// RIDERS.PHP FUNCTIONS
+// ================================================================
+
+function riders_face_preview_src($face_data)
+{
+    return face_get_image_preview($face_data);
+}
+
+// ================================================================
+// HANDLE AUTO-DELETE CHECK (runs on page load)
+// ================================================================
+
+$auto_delete_result = check_and_run_auto_delete($conn);
+
+// ================================================================
+// HANDLE POST REQUESTS
+// ================================================================
 
 $flash = $_SESSION['riders_flash'] ?? '';
-if($auto_reset_result && $flash === '')
-{
-    $flash = 'Daily 11:00 PM reset completed. All riders cleared — E-Bike IDs restart at 001 tomorrow.';
-}
 unset($_SESSION['riders_flash']);
 
 if(isset($_GET['delete']))
@@ -85,6 +312,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
 {
     $action = $_POST['action'];
 
+    // ================================================================
+    // CREATE RIDER
+    // ================================================================
     if($action === 'create_rider')
     {
         $fullname  = trim($_POST['fullname'] ?? '');
@@ -96,39 +326,71 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
         {
             $_SESSION['riders_flash'] = 'Full name, address, phone, and face capture are required.';
         }
-        elseif(!face_parse_stored_data($face_data))
-        {
-            $_SESSION['riders_flash'] = 'Face capture failed validation. Please capture the face again.';
-        }
         else
         {
-            $ebike_id      = get_next_ebike_id($conn);
-            $email         = 'ebike' . $ebike_id . '@rider.local';
-            $temp_password = bin2hex(random_bytes(4));
-            $password      = password_hash($temp_password, PASSWORD_DEFAULT);
-
-            $stmt = $conn->prepare("
-                INSERT INTO users (fullname, email, phone, address, ebike_id, face_data, password, role, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'rider', 'approved')
-            ");
-            $stmt->bind_param('sssssss', $fullname, $email, $phone, $address, $ebike_id, $face_data, $password);
-
-            if($stmt->execute())
-            {
-                $_SESSION['riders_flash'] = 'Rider registered. E-Bike ID: ' . $ebike_id
-                    . ' | Login email: ' . $email . ' | Password: ' . $temp_password;
+            // Parse the face data to get descriptor
+            $parsed_face = face_parse_stored_data($face_data);
+            if (!$parsed_face) {
+                $_SESSION['riders_flash'] = 'Face capture failed validation. Please capture the face again.';
             }
-            else
-            {
-                $_SESSION['riders_flash'] = 'Failed to register rider. Please try again.';
+            else {
+                // ================================================================
+                // DUPLICATE FACE CHECK
+                // ================================================================
+                $duplicate_id = face_check_duplicate($conn, $parsed_face['descriptor']);
+                
+                if ($duplicate_id !== false) {
+                    // Get the duplicate rider's name
+                    $dup_stmt = $conn->prepare("SELECT fullname FROM users WHERE id = ?");
+                    $dup_stmt->bind_param('i', $duplicate_id);
+                    $dup_stmt->execute();
+                    $dup_result = $dup_stmt->get_result();
+                    $dup_rider = $dup_result->fetch_assoc();
+                    $dup_stmt->close();
+                    
+                    $_SESSION['riders_flash'] = 'DUPLICATE FACE DETECTED! This face is already registered to: ' . 
+                                               htmlspecialchars($dup_rider['fullname'] ?? 'Unknown Rider');
+                }
+                else {
+                    // ================================================================
+                    // REGISTER NEW RIDER
+                    // ================================================================
+                    $ebike_id      = get_next_ebike_id($conn);
+                    $email         = 'ebike' . $ebike_id . '@rider.local';
+                    $temp_password = bin2hex(random_bytes(4));
+                    $password      = password_hash($temp_password, PASSWORD_DEFAULT);
+
+                    $stmt = $conn->prepare("
+                        INSERT INTO users (fullname, email, phone, address, ebike_id, face_data, password, role, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'rider', 'approved')
+                    ");
+                    $stmt->bind_param('sssssss', $fullname, $email, $phone, $address, $ebike_id, $face_data, $password);
+
+                    if($stmt->execute())
+                    {
+                        $new_rider_id = (int)$stmt->insert_id;
+                        $stmt->close();
+                        $device = assign_device_for_rider($conn, $new_rider_id);
+                        $_SESSION['riders_flash'] = 'Rider registered. E-Bike ID: ' . $ebike_id
+                            . ' | Login email: ' . $email . ' | Password: ' . $temp_password
+                            . ($device ? ' | ESP32 Device ID: ' . $device['device_id'] . ' | API Token: ' . $device['api_token'] : '');
+                    }
+                    else
+                    {
+                        $_SESSION['riders_flash'] = 'Failed to register rider. Please try again.';
+                        $stmt->close();
+                    }
+                }
             }
-            $stmt->close();
         }
 
         header("Location: riders.php");
         exit;
     }
 
+    // ================================================================
+    // UPDATE RIDER
+    // ================================================================
     if($action === 'update_rider')
     {
         $id        = (int)($_POST['rider_id'] ?? 0);
@@ -145,27 +407,44 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
         {
             if($face_data !== '')
             {
-                if(!face_parse_stored_data($face_data))
-                {
+                $parsed_face = face_parse_stored_data($face_data);
+                if (!$parsed_face) {
                     $_SESSION['riders_flash'] = 'Face capture failed validation. Please capture the face again.';
                 }
-                else
-                {
-                    $stmt = $conn->prepare("
-                        UPDATE users
-                        SET fullname = ?, address = ?, phone = ?, face_data = ?
-                        WHERE id = ? AND role = 'rider'
-                    ");
-                    $stmt->bind_param('ssssi', $fullname, $address, $phone, $face_data, $id);
-                    if($stmt->execute() && $stmt->affected_rows >= 0)
-                    {
-                        $_SESSION['riders_flash'] = 'Rider updated successfully.';
+                else {
+                    // ================================================================
+                    // DUPLICATE FACE CHECK (excluding current rider)
+                    // ================================================================
+                    $duplicate_id = face_check_duplicate($conn, $parsed_face['descriptor'], $id);
+                    
+                    if ($duplicate_id !== false) {
+                        $dup_stmt = $conn->prepare("SELECT fullname FROM users WHERE id = ?");
+                        $dup_stmt->bind_param('i', $duplicate_id);
+                        $dup_stmt->execute();
+                        $dup_result = $dup_stmt->get_result();
+                        $dup_rider = $dup_result->fetch_assoc();
+                        $dup_stmt->close();
+                        
+                        $_SESSION['riders_flash'] = 'DUPLICATE FACE DETECTED! This face is already registered to: ' . 
+                                                   htmlspecialchars($dup_rider['fullname'] ?? 'Unknown Rider');
                     }
-                    else
-                    {
-                        $_SESSION['riders_flash'] = 'Failed to update rider.';
+                    else {
+                        $stmt = $conn->prepare("
+                            UPDATE users
+                            SET fullname = ?, address = ?, phone = ?, face_data = ?
+                            WHERE id = ? AND role = 'rider'
+                        ");
+                        $stmt->bind_param('ssssi', $fullname, $address, $phone, $face_data, $id);
+                        if($stmt->execute() && $stmt->affected_rows >= 0)
+                        {
+                            $_SESSION['riders_flash'] = 'Rider updated successfully.';
+                        }
+                        else
+                        {
+                            $_SESSION['riders_flash'] = 'Failed to update rider.';
+                        }
+                        $stmt->close();
                     }
-                    $stmt->close();
                 }
             }
             else
@@ -192,39 +471,42 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
         exit;
     }
 
-    if(isset($_POST['generate_device']))
+    // ================================================================
+    // SET AUTO-DELETE TIME
+    // ================================================================
+    if($action === 'set_auto_delete_time')
     {
-        $rider_id = (int)$_POST['rider_id'];
-        $api_token = bin2hex(random_bytes(16));
-
-        $check = $conn->prepare("
-            SELECT id, ebike_id FROM users
-            WHERE id = ? AND role = 'rider' AND status = 'approved'
-        ");
-        $check->bind_param('i', $rider_id);
-        $check->execute();
-        $approved_rider = $check->get_result()->fetch_assoc();
-        $check->close();
-
-        if($approved_rider)
-        {
-            $ebike_num = $approved_rider['ebike_id'] ?: str_pad((string)$rider_id, 3, '0', STR_PAD_LEFT);
-            $device_id = 'EBIKE' . str_pad((string)$ebike_num, 4, '0', STR_PAD_LEFT);
-
-            $stmt = $conn->prepare("
-                INSERT INTO devices (rider_id, device_id, api_token)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE device_id = VALUES(device_id), api_token = VALUES(api_token)
-            ");
-            $stmt->bind_param('iss', $rider_id, $device_id, $api_token);
-            $stmt->execute();
-            $stmt->close();
+        $time = trim($_POST['auto_delete_time'] ?? '');
+        
+        if (preg_match('/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+            if (set_scheduled_delete_time($conn, $time)) {
+                $_SESSION['riders_flash'] = 'Auto-delete time set to ' . date('h:i A', strtotime($time));
+            } else {
+                $_SESSION['riders_flash'] = 'Failed to set auto-delete time.';
+            }
+        } else {
+            $_SESSION['riders_flash'] = 'Invalid time format. Please use HH:MM (24-hour format).';
         }
+        
+        header("Location: riders.php");
+        exit;
+    }
 
+    // ================================================================
+    // MANUAL DELETE ALL RIDERS
+    // ================================================================
+    if($action === 'delete_all_riders')
+    {
+        $conn->query("DELETE FROM users WHERE role = 'rider'");
+        $conn->query("ALTER TABLE users AUTO_INCREMENT = 1");
+        $_SESSION['riders_flash'] = 'All riders have been deleted successfully.';
         header("Location: riders.php");
         exit;
     }
 }
+
+backfill_missing_ebike_ids($conn);
+backfill_missing_devices($conn);
 
 $riders = $conn->query("
     SELECT u.*, d.device_id, d.api_token
@@ -244,8 +526,17 @@ while($row = $riders->fetch_assoc()) {
 }
 
 $next_ebike_id = get_next_ebike_id($conn);
-$reset_now  = new DateTime('now', new DateTimeZone(RIDER_RESET_TIMEZONE));
-$next_reset = rider_reset_next_scheduled($reset_now);
+$scheduled_delete_time = get_scheduled_delete_time($conn);
+$delete_time_display = $scheduled_delete_time ? date('h:i A', strtotime($scheduled_delete_time)) : 'Not set';
+
+// Check if auto-delete ran
+$auto_delete_msg = '';
+if ($auto_delete_result['success']) {
+    $auto_delete_msg = '✅ ' . $auto_delete_result['message'];
+} elseif ($auto_delete_result['message'] !== 'No auto-delete time set' && 
+          $auto_delete_result['message'] !== 'Not yet time for auto-delete') {
+    $auto_delete_msg = 'ℹ️ ' . $auto_delete_result['message'];
+}
 
 ?>
 <!DOCTYPE html>
@@ -279,6 +570,7 @@ $next_reset = rider_reset_next_scheduled($reset_now);
     --accent-green: #10b981;
     --accent-red: #ef4444;
     --accent-orange: #f59e0b;
+    --accent-purple: #8b5cf6;
     --shadow: 0 8px 32px rgba(0,0,0,0.4);
     --radius: 12px;
     --radius-sm: 8px;
@@ -601,6 +893,18 @@ body {
     font-size: 18px;
 }
 
+.flash.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+}
+
+.flash.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+}
+
 /* Stats Bar */
 .stats-bar {
     display: flex;
@@ -667,7 +971,16 @@ body {
     height: 16px;
 }
 
-/* ===== RIDER CARDS (Mobile First) ===== */
+.btn-danger {
+    background: var(--accent-red);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
+}
+
+/* ===== RIDER CARDS ===== */
 .rider-grid {
     display: none;
     gap: 12px;
@@ -821,7 +1134,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* ===== TABLE (Desktop) ===== */
+/* ===== TABLE ===== */
 .table-wrapper {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -990,6 +1303,89 @@ tbody td {
 .empty-state p {
     font-size: 14px;
     margin-bottom: 16px;
+}
+
+/* ===== AUTO-DELETE SETTINGS ===== */
+.auto-delete-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.auto-delete-section .info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auto-delete-section .info .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.auto-delete-section .info .time {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-orange);
+}
+
+.auto-delete-section .info .status {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.auto-delete-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auto-delete-form input[type="time"] {
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.auto-delete-form input[type="time"]:focus {
+    border-color: var(--accent-blue);
+}
+
+.auto-delete-form .btn-small {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.auto-delete-form .btn-small.set {
+    background: var(--accent-blue);
+    color: #fff;
+}
+
+.auto-delete-form .btn-small.delete-all {
+    background: var(--accent-red);
+    color: #fff;
+}
+
+.auto-delete-form .btn-small:hover {
+    opacity: 0.9;
 }
 
 /* ===== MODALS ===== */
@@ -1215,21 +1611,18 @@ tbody td {
 /* ============================================================ */
 /* ===== RESPONSIVE ===== */
 
-/* Tablets */
 @media (max-width: 1024px) {
     .content {
         padding: 20px;
     }
 }
 
-/* Mobile */
 @media (max-width: 768px) {
     :root {
         --sidebar-width: 280px;
         --header-height: 56px;
     }
 
-    /* Sidebar toggle */
     .sidebar-toggle {
         display: block;
     }
@@ -1255,7 +1648,6 @@ tbody td {
         margin-left: 0;
     }
 
-    /* Header */
     .header {
         padding: 0 12px 0 52px;
         height: var(--header-height);
@@ -1280,7 +1672,6 @@ tbody td {
         height: 6px;
     }
 
-    /* Content */
     .content {
         padding: 14px 12px;
     }
@@ -1291,7 +1682,6 @@ tbody td {
         margin-bottom: 14px;
     }
 
-    /* Stats */
     .stats-bar {
         gap: 8px;
         margin-bottom: 16px;
@@ -1313,7 +1703,6 @@ tbody td {
         margin-top: 4px;
     }
 
-    /* Show cards, hide table on mobile */
     .rider-grid {
         display: grid;
     }
@@ -1322,7 +1711,25 @@ tbody td {
         display: none;
     }
 
-    /* Modals mobile */
+    .auto-delete-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .auto-delete-section .info {
+        justify-content: center;
+    }
+
+    .auto-delete-form {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .auto-delete-form input[type="time"] {
+        flex: 1;
+        min-width: 120px;
+    }
+
     .modal {
         max-width: 100%;
         margin: 10px;
@@ -1359,7 +1766,6 @@ tbody td {
         max-height: 160px;
     }
 
-    /* Rider card mobile */
     .rider-card-body {
         grid-template-columns: 1fr 1fr;
         gap: 6px 12px;
@@ -1375,7 +1781,6 @@ tbody td {
     }
 }
 
-/* Small phones */
 @media (max-width: 420px) {
     .header-left h1 {
         font-size: 13px;
@@ -1445,9 +1850,21 @@ tbody td {
     .sidebar {
         width: 260px;
     }
+
+    .auto-delete-form {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .auto-delete-form input[type="time"] {
+        width: 100%;
+    }
+
+    .auto-delete-form .btn-small {
+        width: 100%;
+    }
 }
 
-/* Show table on larger screens, hide cards */
 @media (min-width: 769px) {
     .rider-grid {
         display: none !important;
@@ -1460,7 +1877,7 @@ tbody td {
 </head>
 <body>
 
-<!-- ===== SIDEBAR TOGGLE (Mobile) ===== -->
+<!-- ===== SIDEBAR TOGGLE ===== -->
 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="3" y1="6" x2="21" y2="6"/>
@@ -1553,9 +1970,46 @@ tbody td {
     </header>
 
     <div class="content">
-        <?php if($flash): ?>
-        <div class="flash"><?php echo htmlspecialchars($flash); ?></div>
+        <?php if($flash): 
+            $flash_class = '';
+            if (strpos($flash, 'DUPLICATE') !== false) {
+                $flash_class = 'error';
+            } elseif (strpos($flash, 'successfully') !== false) {
+                $flash_class = 'success';
+            }
+        ?>
+        <div class="flash <?php echo $flash_class; ?>"><?php echo htmlspecialchars($flash); ?></div>
         <?php endif; ?>
+
+        <?php if($auto_delete_msg): ?>
+        <div class="flash success"><?php echo htmlspecialchars($auto_delete_msg); ?></div>
+        <?php endif; ?>
+
+        <!-- ===== AUTO-DELETE SETTINGS ===== -->
+        <div class="auto-delete-section">
+            <div class="info">
+                <span class="label">⏰ Auto-Delete Schedule</span>
+                <span class="time"><?php echo $delete_time_display; ?></span>
+                <span class="status">
+                    <?php if ($scheduled_delete_time): ?>
+                        (Riders will be automatically deleted daily at <?php echo $delete_time_display; ?>)
+                    <?php else: ?>
+                        (No auto-delete scheduled)
+                    <?php endif; ?>
+                </span>
+            </div>
+            <div class="auto-delete-form">
+                <form method="POST" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <input type="hidden" name="action" value="set_auto_delete_time">
+                    <input type="time" name="auto_delete_time" value="<?php echo htmlspecialchars($scheduled_delete_time); ?>" required>
+                    <button type="submit" class="btn-small set">Set Time</button>
+                </form>
+                <form method="POST" onsubmit="return confirm('⚠️ Are you sure you want to delete ALL riders? This cannot be undone!');">
+                    <input type="hidden" name="action" value="delete_all_riders">
+                    <button type="submit" class="btn-small delete-all">🗑️ Delete All Riders</button>
+                </form>
+            </div>
+        </div>
 
         <div class="stats-bar">
             <div class="stat-chip">
@@ -1568,7 +2022,14 @@ tbody td {
             </div>
             <div class="stat-chip">
                 <span class="dot"></span>
-                Reset <span class="num"><?php echo $next_reset->format('M j, g:i A'); ?></span>
+                Scheduled Delete
+                <span class="num">
+                    <?php if ($scheduled_delete_time): ?>
+                        <?php echo date('g:i A', strtotime($scheduled_delete_time)); ?>
+                    <?php else: ?>
+                        Not set
+                    <?php endif; ?>
+                </span>
             </div>
             <button class="btn-primary" id="btn-open-create">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1622,9 +2083,9 @@ tbody td {
                         <span class="label">Device</span>
                         <span class="value" style="font-size:11px;color:var(--text-muted);">
                             <?php if(!empty($row['device_id'])): ?>
-                            <?php echo htmlspecialchars($row['device_id']); ?>
+                            <?php echo htmlspecialchars($row['device_id']); ?> <span style="color:var(--accent-green);">(ESP32)</span>
                             <?php else: ?>
-                            Not generated
+                            Pending assignment
                             <?php endif; ?>
                         </span>
                     </div>
@@ -1649,12 +2110,6 @@ tbody td {
                         </svg>
                         Delete
                     </a>
-                    <form method="POST" style="display:inline;">
-                        <input type="hidden" name="rider_id" value="<?php echo (int)$row['id']; ?>">
-                        <button type="submit" name="generate_device" class="btn btn-device-card">
-                            <?php echo !empty($row['device_id']) ? '↻ Regenerate' : '+ Generate'; ?>
-                        </button>
-                    </form>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -1711,10 +2166,10 @@ tbody td {
                         <td><span class="table-ebike"><?php echo htmlspecialchars($row['ebike_id'] ?? '—'); ?></span></td>
                         <td class="table-device">
                             <?php if(!empty($row['device_id'])): ?>
-                            <strong>ID:</strong> <?php echo htmlspecialchars($row['device_id']); ?><br>
-                            <strong>Token:</strong> <?php echo htmlspecialchars($row['api_token']); ?>
+                            <strong>ESP32 ID:</strong> <?php echo htmlspecialchars($row['device_id']); ?><br>
+                            <strong>API Token:</strong> <?php echo htmlspecialchars($row['api_token']); ?>
                             <?php else: ?>
-                            Not generated
+                            Pending assignment
                             <?php endif; ?>
                         </td>
                         <td>
@@ -1733,12 +2188,6 @@ tbody td {
                                     </svg>
                                     Delete
                                 </a>
-                                <form method="POST" style="display:inline;">
-                                    <input type="hidden" name="rider_id" value="<?php echo (int)$row['id']; ?>">
-                                    <button type="submit" name="generate_device" class="btn btn-device-card" style="font-size:10px;padding:3px 10px;">
-                                        <?php echo !empty($row['device_id']) ? '↻ Regenerate' : '+ Generate'; ?>
-                                    </button>
-                                </form>
                             </div>
                         </td>
                     </tr>
@@ -1780,7 +2229,7 @@ tbody td {
                     <input type="tel" name="phone" required placeholder="09XX XXX XXXX">
                 </div>
                 <div class="form-group">
-                    <label>E-Bike ID (auto-assigned)</label>
+                    <label>E-Bike ID (auto-assigned - reuses missing IDs)</label>
                     <div class="ebike-preview">Next available: <?php echo htmlspecialchars($next_ebike_id); ?></div>
                 </div>
                 <div class="form-group">
@@ -2072,6 +2521,7 @@ tbody td {
 
 })();
 </script>
-
+<!-- Global Alert Widget -->
+<script src="../assets/js/global-alert-widget.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Daily rider reset — runs at 11:00 PM (Asia/Manila).
- * Clears all riders, devices, and GPS logs so E-Bike IDs restart at 001 next day.
+ * Legacy daily reset helpers — no longer runs automatically on page load.
+ * Rider cleanup is controlled by the Auto-Delete Schedule in admin/riders.php.
  */
 
 define('RIDER_RESET_TIMEZONE', 'Asia/Manila');
@@ -95,15 +95,7 @@ function run_daily_rider_reset($conn)
 
 function maybe_run_daily_rider_reset($conn)
 {
-    $now      = new DateTime('now', new DateTimeZone(RIDER_RESET_TIMEZONE));
-    $last_run = rider_reset_get_last_run($conn);
-
-    if(!rider_reset_is_due($now, $last_run))
-    {
-        return null;
-    }
-
-    return run_daily_rider_reset($conn);
+    return null;
 }
 
 function rider_reset_next_scheduled(DateTime $now = null)

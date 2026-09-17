@@ -13,7 +13,6 @@ require_once("../includes/zone-settings.php");
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_perimeter')
 {
     $perimeter_points = $_POST['perimeter_points'] ?? '';
-    // Expecting JSON string like '[{"lat":40.712,"lng":-74.006},...]'
     if(!empty($perimeter_points)) {
         zone_set_setting($conn, 'perimeter_points', $perimeter_points);
         $_SESSION['map_flash'] = 'Operational perimeter saved with ' . substr_count($perimeter_points, 'lat') . ' points.';
@@ -29,16 +28,12 @@ $flash = $_SESSION['map_flash'] ?? '';
 unset($_SESSION['map_flash']);
 
 $zone_settings = zone_load_settings($conn);
-// Load perimeter points (JSON string)
-$perimeter_points_json = $zone_settings['perimeter_points'] ?? '';
-$perimeter_points = [];
-if(!empty($perimeter_points_json)) {
-    $perimeter_points = json_decode($perimeter_points_json, true);
-    if(!is_array($perimeter_points)) $perimeter_points = [];
-}
+$perimeter_points = zone_get_perimeter($conn);
+$perimeter_points_json = !empty($perimeter_points) ? json_encode($perimeter_points) : '';
 
 $riders = $conn->query("
-    SELECT * FROM users
+    SELECT id, fullname, ebike_id, status
+    FROM users
     WHERE role='rider' AND status='approved'
     ORDER BY fullname ASC
 ");
@@ -107,7 +102,6 @@ body {
     padding-bottom: var(--safe-bottom);
 }
 
-/* ── Main (fullscreen map) ──────────────────── */
 .main {
     flex: 1;
     display: flex;
@@ -116,7 +110,6 @@ body {
     height: 100%;
 }
 
-/* ── Top bar (compact) ───────────────────────── */
 .topbar {
     background: rgba(17, 24, 39, 0.92);
     backdrop-filter: blur(6px);
@@ -199,7 +192,6 @@ body {
     50%       { box-shadow: 0 0 0 4px rgba(16,185,129,0.05); }
 }
 
-/* ── Map wrapper ─────────────────────────────── */
 .map-wrapper {
     flex: 1;
     position: relative;
@@ -213,7 +205,6 @@ body {
     z-index: 0;
 }
 
-/* ── Map overlays ────────────────────────────── */
 .map-overlays {
     position: absolute;
     inset: 0;
@@ -224,7 +215,6 @@ body {
     pointer-events: auto;
 }
 
-/* ── Floating panel (compact, collapsible) ───── */
 .map-panel {
     position: absolute;
     bottom: 12px;
@@ -299,7 +289,6 @@ body {
     transition: opacity 0.2s ease;
 }
 
-/* Panel body content */
 .panel-title {
     font-size: 9px;
     font-weight: 600;
@@ -309,7 +298,6 @@ body {
     margin-bottom: 6px;
 }
 
-/* Rider buttons (compact horizontal scroll) */
 .rider-scroll {
     display: flex;
     gap: 6px;
@@ -370,7 +358,6 @@ body {
     color: var(--accent-blue);
 }
 
-/* Info row (compact) */
 .rider-info {
     display: flex;
     align-items: center;
@@ -411,8 +398,13 @@ body {
     letter-spacing: 0.2px;
     line-height: 1.2;
 }
-
-/* Refresh row (compact) */
+/* ✅ ADD THIS TO YOUR CSS */
+.rider-map-marker--outside .rider-map-bike {
+    background: #EF4444 !important; /* Red for outside perimeter */
+}
+.rider-map-marker--outside .rider-map-pulse {
+    background: rgba(239, 68, 68, 0.55) !important;
+}
 .refresh-row {
     display: flex;
     align-items: center;
@@ -439,7 +431,6 @@ body {
     transition: width 1s linear;
 }
 
-/* Zone actions (compact) */
 .zone-actions {
     display: flex;
     gap: 6px;
@@ -484,7 +475,6 @@ body {
     background: var(--bg-card-hover);
 }
 
-/* Zone panel (expandable, compact) */
 .zone-panel {
     display: none;
     margin-top: 6px;
@@ -566,12 +556,10 @@ body {
     letter-spacing: 0.3px;
 }
 
-/* Flash message - hidden, using SweetAlert only for save */
 .map-flash {
     display: none;
 }
 
-/* Legend (compact, bottom-right) */
 .zone-legend-float {
     position: absolute;
     bottom: 68px;
@@ -640,9 +628,11 @@ body {
     border-top: 2px dashed #3B82F6;
 }
 
-/* Leaflet dark overrides */
 .leaflet-container {
     background: #0d1929;
+}
+.leaflet-tile-pane {
+    filter: invert(92%) hue-rotate(180deg) brightness(82%) contrast(92%) saturate(70%);
 }
 .leaflet-control-zoom a {
     background: var(--bg-surface) !important;
@@ -656,35 +646,41 @@ body {
     display: none !important;
 }
 
-/* Rider map markers */
 .rider-map-icon-shell {
     background: transparent !important;
     border: none !important;
 }
 .rider-map-marker {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
 }
-.rider-map-dot {
+.rider-map-bike {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: 2px solid #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 2;
+}
+.rider-map-bike svg {
+    width: 16px;
+    height: 16px;
 }
 .rider-map-pulse {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 10px;
-    height: 10px;
-    margin: -5px 0 0 -5px;
+    width: 28px;
+    height: 28px;
+    margin: -14px 0 0 -14px;
     border-radius: 50%;
     animation: rider-marker-pulse 2s ease-out infinite;
     z-index: 1;
@@ -692,17 +688,18 @@ body {
 .rider-map-pulse--delay {
     animation-delay: 1s;
 }
-.rider-map-marker--live .rider-map-dot {
+.rider-map-marker--live .rider-map-bike {
     background: var(--accent-green);
 }
 .rider-map-marker--live .rider-map-pulse {
     background: rgba(16, 185, 129, 0.55);
 }
-.rider-map-marker--stale .rider-map-dot {
-    background: var(--accent-amber);
+/* ✅ GRAY para sa offline */
+.rider-map-marker--stale .rider-map-bike {
+    background: #6B7280;
 }
 .rider-map-marker--stale .rider-map-pulse {
-    background: rgba(245, 158, 11, 0.45);
+    background: rgba(71, 85, 105, 0.45);
     animation-duration: 3s;
 }
 @keyframes rider-marker-pulse {
@@ -711,7 +708,6 @@ body {
     100% { transform: scale(3.2); opacity: 0; }
 }
 
-/* ── Draggable point markers ─────────────────── */
 .perimeter-marker-draggable {
     background: transparent !important;
     border: none !important;
@@ -741,7 +737,25 @@ body {
     background: #60A5FA;
 }
 
-/* Fixed perimeter point markers (not draggable) */
+.perimeter-point-saved {
+    background: transparent !important;
+    border: none !important;
+}
+.perimeter-point-saved .point-inner {
+    width: 22px;
+    height: 22px;
+    background: #F59E0B;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
 .perimeter-point-fixed {
     background: transparent !important;
     border: none !important;
@@ -761,12 +775,64 @@ body {
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
-/* Swipe hint - hidden since we removed swipe feature */
-.swipe-hint {
-    display: none;
+.toast-notification {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(8px);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    max-width: 80%;
+    text-align: center;
 }
 
-/* Responsive fine-tune */
+.toast-notification.show {
+    opacity: 1;
+}
+
+.perimeter-line {
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
+}
+
+.leaflet-overlay-pane {
+    z-index: 400 !important;
+}
+.leaflet-marker-pane {
+    z-index: 500 !important;
+}
+.leaflet-popup-pane {
+    z-index: 600 !important;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    background: #111827 !important;
+    color: #F1F5F9 !important;
+    border: 1px solid #2D3F55 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+}
+.custom-popup .leaflet-popup-tip {
+    background: #111827 !important;
+    border: 1px solid #2D3F55 !important;
+}
+.custom-popup .leaflet-popup-content {
+    margin: 10px 12px !important;
+    font-size: 12px;
+    line-height: 1.5;
+    min-width: 140px;
+}
+
 @media (max-width: 480px) {
     .map-panel {
         bottom: 8px;
@@ -817,7 +883,6 @@ body {
     }
 }
 
-/* SweetAlert dark theme override */
 .swal2-popup {
     background: var(--bg-surface) !important;
     color: var(--text-primary) !important;
@@ -839,54 +904,51 @@ body {
 .swal2-close {
     color: var(--text-secondary) !important;
 }
+/* ✅ Vibration Alert Styles */
+.rider-map-marker--vibration .rider-map-bike {
+    background: #F59E0B !important;
+    animation: vibration-shake 0.3s infinite;
+}
 
-/* Toast notification for quick feedback */
-.toast-notification {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(17, 24, 39, 0.95);
-    backdrop-filter: blur(8px);
-    color: var(--text-primary);
-    padding: 8px 16px;
+.rider-map-marker--vibration .rider-map-pulse {
+    background: rgba(245, 158, 11, 0.6) !important;
+    animation: vibration-pulse 0.5s ease-out infinite;
+}
+
+@keyframes vibration-shake {
+    0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+    25% { transform: translate(-50%, -50%) rotate(-10deg); }
+    75% { transform: translate(-50%, -50%) rotate(10deg); }
+}
+
+@keyframes vibration-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Vibration alert badge */
+.vibration-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #F59E0B;
+    color: #fff;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 2px 5px;
     border-radius: 8px;
-    border: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 500;
-    z-index: 9999;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    max-width: 80%;
-    text-align: center;
+    animation: vibration-badge-pulse 1s infinite;
+    z-index: 10;
 }
 
-.toast-notification.show {
-    opacity: 1;
-}
-
-/* Perimeter line styling - ensure visibility */
-.perimeter-line {
-    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
-}
-
-/* Make sure perimeter is always on top */
-.leaflet-overlay-pane {
-    z-index: 400 !important;
-}
-.leaflet-marker-pane {
-    z-index: 500 !important;
-}
-.leaflet-popup-pane {
-    z-index: 600 !important;
+@keyframes vibration-badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 </style>
 </head>
 <body>
 
-<!-- ── Main ─────────────────────────────────── -->
 <div class="main">
 
     <header class="topbar">
@@ -932,14 +994,21 @@ body {
                         <span class="zone-legend-line-dash"></span>
                         <span>Draft</span>
                     </div>
-                    <div class="zone-legend-item" style="margin-top:3px;">
-                        <span style="display:inline-block;width:14px;height:14px;background:#3B82F6;border:2px solid #fff;border-radius:50%;"></span>
-                        <span>Saved Point</span>
+                    <div class="zone-legend-item" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">
+                        <span style="display:inline-block;width:14px;height:14px;background:#10B981;border-radius:50%;"></span>
+                        <span>Rider (Online)</span>
+                    </div>
+                    <div class="zone-legend-item">
+                        <span style="display:inline-block;width:14px;height:14px;background:#6B7280;border-radius:50%;"></span>
+                        <span>Rider (Offline)</span>
+                    </div>
+                    <div class="zone-legend-item" style="margin-top:4px;">
+                        <span style="display:inline-block;width:14px;height:14px;background:#F59E0B;border-radius:50%;"></span>
+                        <span>Vibration Alert</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Floating panel (collapsible) -->
             <div class="map-panel" id="mapPanel">
 
                 <div class="panel-header">
@@ -1033,16 +1102,15 @@ body {
 
 </div>
 
-<!-- Toast notification for quick feedback -->
 <div class="toast-notification" id="toastNotification"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="../assets/js/geofence-map.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 
-// ---------- Toast notification helper ----------
 function showToast(message, duration = 2000) {
     var toast = document.getElementById('toastNotification');
     if (!toast) return;
@@ -1054,7 +1122,6 @@ function showToast(message, duration = 2000) {
     }, duration);
 }
 
-// ---------- Back navigation (button only, no swipe) ----------
 document.getElementById('backBtn').addEventListener('click', function(e) {
     e.preventDefault();
     if (document.referrer && document.referrer.includes('dashboard.php')) {
@@ -1064,7 +1131,6 @@ document.getElementById('backBtn').addEventListener('click', function(e) {
     }
 });
 
-// ---------- Panel toggle ----------
 var mapPanel = document.getElementById('mapPanel');
 var panelToggleBtn = document.getElementById('panelToggleBtn');
 var isPanelCollapsed = false;
@@ -1075,15 +1141,12 @@ panelToggleBtn.addEventListener('click', function() {
     var icon = panelToggleBtn.querySelector('svg');
     if (isPanelCollapsed) {
         icon.innerHTML = '<polyline points="6 9 12 15 18 9"/>';
-        panelToggleBtn.setAttribute('aria-label', 'Expand panel');
     } else {
         icon.innerHTML = '<polyline points="18 15 12 9 6 15"/>';
-        panelToggleBtn.setAttribute('aria-label', 'Collapse panel');
     }
     setTimeout(function() { if(map) map.invalidateSize(); }, 350);
 });
 
-// ---------- SweetAlert flash messages (only for saved perimeter) ----------
 document.addEventListener('DOMContentLoaded', function() {
     var flashElement = document.querySelector('.map-flash[data-flash]');
     if (flashElement) {
@@ -1105,7 +1168,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ---------- Core logic ----------
 var savedPerimeterPoints = <?php echo json_encode($perimeter_points); ?>;
 var perimeterPoints = [];
 var editingMode = false;
@@ -1114,49 +1176,283 @@ var pointMarkers = [];
 var dragMarkers = [];
 var fixedMarkers = [];
 var perimeterPolygon = null;
+var perimeterGlowPolygon = null;
 var restrictedAreaPolygon = null;
 var map;
 var riderList = [];
 var selectedRiderId = null;
+var riderMarkers = [];
+var geofenceAlertState = {};
+var geofenceLayers = {};
 
-// ---------- Nearest neighbor auto-connect ----------
-function nearestNeighborConnect(points) {
-    if (points.length < 3) return points;
+var EBIKE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="5.5" cy="17.5" r="3.5"/>' +
+    '<circle cx="18.5" cy="17.5" r="3.5"/>' +
+    '<path d="M5.5 17.5L10 8h4l2 4h3"/>' +
+    '<path d="M10 8l3 5.5h5.5"/>' +
+    '<path d="M9 8h4"/>' +
+    '<circle cx="12" cy="6" r="1" fill="#fff" stroke="none"/>' +
+    '</svg>';
+
+// ✅ UPDATED: createRiderMarker with vibration alert
+function createRiderMarker(rider) {
+    var isOnline = rider.is_online;
+    var hasLocation = rider.has_location && rider.lat && rider.lng;
+    var hasVibration = rider.vibration == 1 || rider.vibration_alert == true;
     
-    var remaining = points.map(function(p, idx) {
-        return { lat: p.lat, lng: p.lng, index: idx };
-    });
+    var onlineClass = isOnline ? 'live' : 'stale';
+    var markerColor = isOnline ? '#10B981' : '#6B7280';
     
-    var sorted = [remaining[0]];
-    remaining.splice(0, 1);
-    
-    while (remaining.length > 0) {
-        var last = sorted[sorted.length - 1];
-        var nearestIdx = 0;
-        var nearestDist = Infinity;
-        
-        for (var i = 0; i < remaining.length; i++) {
-            var dx = remaining[i].lat - last.lat;
-            var dy = remaining[i].lng - last.lng;
-            var dist = dx * dx + dy * dy;
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestIdx = i;
-            }
-        }
-        
-        sorted.push(remaining[nearestIdx]);
-        remaining.splice(nearestIdx, 1);
+    // ✅ VIBRATION ALERT - Orange color with shake animation
+    if (hasVibration) {
+        onlineClass = 'vibration';
+        markerColor = '#F59E0B';
+    }
+    // ✅ GEOFENCE CHECK - Red if outside perimeter
+    else if (rider.geofence_status === 'outside' || 
+        (rider.geofence && rider.geofence.status === 'outside')) {
+        markerColor = '#EF4444';
+        onlineClass = 'outside';
     }
     
-    return sorted.map(function(p) {
-        return { lat: p.lat, lng: p.lng };
+    var icon = L.divIcon({
+        className: 'rider-map-icon-shell',
+        html: `
+            <div class="rider-map-marker rider-map-marker--${onlineClass}" style="cursor:pointer;">
+                <div class="rider-map-bike" style="background: ${markerColor};">
+                    ${EBIKE_ICON_SVG}
+                </div>
+                ${isOnline ? '<div class="rider-map-pulse"></div><div class="rider-map-pulse rider-map-pulse--delay"></div>' : ''}
+                ${hasVibration ? '<div class="vibration-badge">⚠️ VIB</div>' : ''}
+            </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+    });
+    
+    var popupContent = `
+        <div style="min-width:160px;">
+            <strong style="font-size:14px;">${rider.fullname}</strong><br>
+            <span style="color:#94A3B8;font-size:11px;">E-Bike: ${rider.ebike_id || 'N/A'}</span><br>
+            <span style="color:${isOnline ? '#10B981' : '#6B7280'};font-size:11px;">
+                ${isOnline ? '🟢 Online' : '🔴 Offline'}
+            </span><br>
+            ${hasVibration ? 
+              '<span style="color:#F59E0B;font-size:11px;font-weight:bold;">⚠️ VIBRATION DETECTED!</span><br>' : ''}
+            ${rider.geofence_status === 'outside' ? 
+              '<span style="color:#EF4444;font-size:11px;">⚠️ OUTSIDE PERIMETER</span><br>' : ''}
+            ${rider.last_signal ? `<span style="color:#475569;font-size:10px;">🕐 ${new Date(rider.last_signal).toLocaleString()}</span><br>` : ''}
+            ${hasLocation ? `<span style="color:#475569;font-size:10px;">📍 ESP32: ${rider.lat.toFixed(6)}, ${rider.lng.toFixed(6)}</span>` : '📡 Waiting for GPS'}
+        </div>
+    `;
+    
+    var marker = L.marker([rider.lat || 0, rider.lng || 0], { 
+        icon: icon,
+        title: rider.fullname
+    });
+    
+    marker.bindPopup(popupContent, { className: 'custom-popup' });
+    
+    marker.on('click', function() {
+        if (rider.has_location && rider.lat && rider.lng) {
+            map.flyTo([rider.lat, rider.lng], 17, {
+                duration: 1.0,
+                easeLinearity: 0.25
+            });
+        }
+    });
+    
+    return marker;
+}
+
+// ✅ UPDATED: updateRiderMarkers with geofence checking for all riders
+function updateRiderMarkers(riders) {
+    riderMarkers.forEach(function(marker) {
+        if (marker && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
+    });
+    riderMarkers = [];
+    riderList = riders;
+    
+    riders.forEach(function(rider) {
+        // Check if rider has location (even if offline)
+        var hasLastLocation = rider.lat !== null && rider.lng !== null && 
+                              rider.lat !== undefined && rider.lng !== undefined &&
+                              rider.lat != 0 && rider.lng != 0;
+        
+        // ✅ CALCULATE GEOFENCE STATUS for ALL riders with location
+        if (hasLastLocation && savedPerimeterPoints && savedPerimeterPoints.length >= 3) {
+            var geofenceResult = GeofenceMap.evaluate(rider.lat, rider.lng, savedPerimeterPoints);
+            rider.geofence_status = geofenceResult.status;
+        }
+        
+        // Show marker if rider has location data
+        if (hasLastLocation) {
+            var marker = createRiderMarker(rider);
+            marker.riderId = rider.id;
+            marker.addTo(map);
+            riderMarkers.push(marker);
+        }
+    });
+    
+    renderRiderButtons(riders);
+    
+    if (!selectedRiderId || !riderList.find(function(r) { return String(r.id) === selectedRiderId; })) {
+        var firstOnline = riderList.find(function(r) { return r.is_online; });
+        var firstWithLocation = riderList.find(function(r) { return r.lat && r.lng; });
+        var selected = firstOnline || firstWithLocation || riderList[0];
+        if (selected) {
+            selectedRiderId = String(selected.id);
+            setActiveButton(selectedRiderId);
+            updateSelectedRiderDisplay(getRiderById(selectedRiderId));
+        }
+    }
+}
+// ✅ VIBRATION ALERT FUNCTION
+var vibrationAlertState = {};
+
+function checkVibrationAlerts(riders) {
+    riders.forEach(function(rider) {
+        if (!rider.has_location || !rider.lat || !rider.lng) return;
+        
+        var hasVibration = rider.vibration == 1 || rider.vibration_alert == true;
+        var key = String(rider.id);
+        
+        if (hasVibration) {
+            // Show alert only once per vibration event
+            if (!vibrationAlertState[key] || 
+                (Date.now() - vibrationAlertState[key] > 30000)) { // 30 sec cooldown
+                
+                vibrationAlertState[key] = Date.now();
+                showVibrationAlert(rider);
+                saveVibrationAlert(rider);
+            }
+        } else {
+            // Reset state when no vibration
+            vibrationAlertState[key] = null;
+        }
     });
 }
 
-function autoConnectPoints(points) {
-    if (points.length < 3) return points;
-    return nearestNeighborConnect(points);
+function showVibrationAlert(rider) {
+    // Play alert sound (optional)
+    playAlertSound();
+    
+    Swal.fire({
+        title: '⚠️ Vibration Detected!',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <strong style="font-size: 16px;">${rider.fullname}</strong><br>
+                <span style="color: #F59E0B; font-size: 14px;">
+                    ${rider.is_online ? '🟢 Online' : '🔴 Offline'} - Possible theft/movement!
+                </span><br><br>
+                <span style="font-size: 12px; color: #94A3B8;">
+                    📍 Location: ${rider.lat.toFixed(6)}, ${rider.lng.toFixed(6)}<br>
+                    🕐 Time: ${new Date().toLocaleString()}
+                </span>
+            </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'View on Map',
+        confirmButtonColor: '#F59E0B',
+        showCancelButton: true,
+        cancelButtonText: 'Dismiss',
+        cancelButtonColor: '#1E293B',
+        background: '#111827',
+        color: '#F1F5F9',
+        timer: 15000,
+        timerProgressBar: true,
+        allowOutsideClick: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            map.flyTo([rider.lat, rider.lng], 18, { duration: 1.2 });
+        }
+    });
+}
+
+function playAlertSound() {
+    // Create audio context for alert sound
+    try {
+        var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        var oscillator = audioContext.createOscillator();
+        var gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.3;
+        
+        oscillator.start();
+        
+        // Beep pattern
+        setTimeout(function() { oscillator.frequency.value = 600; }, 150);
+        setTimeout(function() { oscillator.frequency.value = 800; }, 300);
+        setTimeout(function() { oscillator.stop(); }, 450);
+    } catch(e) {
+        console.log('Audio not supported');
+    }
+}
+
+// ✅ SAVE VIBRATION ALERT TO DATABASE
+function saveVibrationAlert(rider) {
+    fetch('../api/save-alert.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            rider_id: rider.id,
+            rider_name: rider.fullname,
+            ebike_id: rider.ebike_id || 'N/A',
+            latitude: rider.lat,
+            longitude: rider.lng,
+            is_online: rider.is_online ? 1 : 0,
+            alert_type: 'vibration',  // ✅ Important: mark as vibration alert
+            vibration: 1
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        console.log('Vibration alert saved:', data);
+    })
+    .catch(function(error) {
+        console.error('Error saving vibration alert:', error);
+    });
+}
+
+function showGeofenceAlert(rider) {
+    Swal.fire({
+        title: '⚠️ Perimeter Breach!',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <strong style="font-size: 16px;">${rider.fullname}</strong><br>
+                <span style="color: #EF4444; font-size: 14px;">
+                    ${rider.is_online ? '🟢 Online - Currently outside!' : '🔴 Offline - Last location outside!'}
+                </span><br><br>
+                <span style="font-size: 12px; color: #94A3B8;">
+                    📍 Location: ${rider.lat.toFixed(6)}, ${rider.lng.toFixed(6)}<br>
+                    🕐 Time: ${new Date().toLocaleString()}
+                </span>
+            </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Acknowledge',
+        confirmButtonColor: '#EF4444',
+        showCancelButton: true,
+        cancelButtonText: 'View on Map',
+        cancelButtonColor: '#3B82F6',
+        background: '#111827',
+        color: '#F1F5F9',
+        timer: 10000,
+        timerProgressBar: true,
+        allowOutsideClick: false
+    }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.cancel) {
+            // Focus on rider location
+            map.flyTo([rider.lat, rider.lng], 17, { duration: 1.0 });
+        }
+    });
 }
 
 function parseTimestamp(value) {
@@ -1188,15 +1484,25 @@ function updateSelectedRiderDisplay(rider) {
     var coordsDisplay = document.getElementById('coordsDisplay');
     var dot = document.getElementById('selectedRiderDot');
     if(!coordsDisplay || !rider) return;
+    
     var name = rider.fullname || ('Rider ' + rider.id);
     var online = !!rider.is_online;
     var label = rider.status_label || (online ? 'Online' : 'Offline');
     var details = name + ' — ' + label;
-    if(rider.battery) details += ' | ' + rider.battery + '%';
+    if (rider.location_source) {
+        details += '';
+    }
+    if(rider.battery) details += '' + '';
+    if(rider.has_location && rider.lat && rider.lng) {
+        details += ' | 📍 ' + rider.lat.toFixed(6) + ', ' + rider.lng.toFixed(6);
+    } else {
+        details += ' | 📡 Waiting for GPS';
+    }
     details += ' (' + formatLastOnline(rider.last_online_at || rider.last_signal) + ')';
     coordsDisplay.textContent = details;
+    
     if(dot) {
-        dot.style.background = online ? 'var(--accent-green)' : 'var(--text-muted)';
+        dot.style.background = online ? '#10B981' : '#6B7280';
         dot.style.boxShadow = online ? '0 0 0 2px rgba(16,185,129,0.2)' : 'none';
         dot.style.animation = online ? 'pulse-green 2s infinite' : 'none';
     }
@@ -1209,7 +1515,6 @@ function renderRiderButtons(data) {
     container.innerHTML = '';
     if(!riderList.length) {
         container.innerHTML = '<button type="button" class="rider-btn disabled">No riders</button>';
-        document.getElementById('coordsDisplay').textContent = 'No rider data';
         return;
     }
     if(!selectedRiderId) {
@@ -1217,7 +1522,9 @@ function renderRiderButtons(data) {
         selectedRiderId = String((firstOnline || riderList[0]).id);
     }
     riderList.forEach(function(rider) {
-        var online = !!rider.is_online;
+        var signalAge = rider.signal_age_seconds || 999;
+        var online = rider.is_online && signalAge < 60;
+        var hasLocation = rider.has_location && rider.lat && rider.lng;
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'rider-btn' + (String(rider.id) === selectedRiderId ? ' active' : '') + (!online ? ' no-signal' : '');
@@ -1227,151 +1534,210 @@ function renderRiderButtons(data) {
         btn.appendChild(name);
         var status = document.createElement('span');
         status.className = 'rider-status';
-        status.textContent = rider.status_label || (online ? 'Online' : 'Offline');
+        status.textContent = (online ? '🟢' : '🔴') + ' ' + (online ? 'Online' : 'Offline');
+        status.textContent += hasLocation ? ' ' : ' ';
         btn.appendChild(status);
+        
+        // ✅ UPDATED: Click handler with map centering
         btn.addEventListener('click', function() {
             selectedRiderId = String(rider.id);
             setActiveButton(selectedRiderId);
             updateSelectedRiderDisplay(rider);
+            
+            // ✅ Center map on rider's location
+            if (rider.has_location && rider.lat && rider.lng) {
+                var zoomLevel = 17; // Street-level zoom
+                
+                // Smooth animation to rider's location
+                map.flyTo([rider.lat, rider.lng], zoomLevel, {
+                    duration: 1.2, // Animation duration in seconds
+                    easeLinearity: 0.25
+                });
+                
+                // Open the popup for this rider
+                var riderMarker = riderMarkers.find(function(marker) {
+                    var markerLatLng = marker.getLatLng();
+                    return markerLatLng.lat === rider.lat && markerLatLng.lng === rider.lng;
+                });
+                
+                if (riderMarker) {
+                    setTimeout(function() {
+                        riderMarker.openPopup();
+                    }, 1200); // Open popup after animation completes
+                }
+            } else {
+                // If no location, show toast
+                showToast('No GPS location available for this rider', 2000);
+            }
         });
+        
         container.appendChild(btn);
     });
     updateSelectedRiderDisplay(getRiderById(selectedRiderId));
 }
 
-function refreshRiderStatuses(data) {
-    riderList = Array.isArray(data) ? data : [];
-    document.querySelectorAll('.rider-btn[data-rider-id]').forEach(function(btn) {
-        var rider = getRiderById(btn.dataset.riderId);
-        if(!rider) return;
-        var online = !!rider.is_online;
-        var status = btn.querySelector('.rider-status');
-        btn.classList.toggle('no-signal', !online);
-        if(status) status.textContent = rider.status_label || (online ? 'Online' : 'Offline');
-    });
-    updateSelectedRiderDisplay(getRiderById(selectedRiderId));
-}
-
-function updateMap() {
-    fetch('../api/get-all-locations.php')
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            var hasButtons = document.querySelector('.rider-btn[data-rider-id]');
-            if(!hasButtons) renderRiderButtons(data);
-            else refreshRiderStatuses(data);
-        })
-        .catch(function() {
-            document.getElementById('coordsDisplay').textContent = 'Status unavailable';
-        });
-}
-
-// ---------- Enhanced Perimeter helpers with guaranteed visibility ----------
-function drawPerimeterLayers() {
-    console.log('drawPerimeterLayers called with', perimeterPoints.length, 'points');
-    
-    // Remove existing layers
-    if(perimeterPolygon) {
-        map.removeLayer(perimeterPolygon);
-        perimeterPolygon = null;
-    }
-    if(restrictedAreaPolygon) {
-        map.removeLayer(restrictedAreaPolygon);
-        restrictedAreaPolygon = null;
-    }
-    
-    // Check if we have enough points
-    if(!perimeterPoints || perimeterPoints.length < 3) {
-        console.log('Not enough points to draw perimeter (need at least 3)');
-        if(draftPolyline) {
-            map.removeLayer(draftPolyline);
-            draftPolyline = null;
-        }
+// ✅ UPDATED: checkRiderGeofenceAlerts - now checks ALL riders with location
+function checkRiderGeofenceAlerts(riders) {
+    if (!savedPerimeterPoints || savedPerimeterPoints.length < 3 || typeof GeofenceMap === 'undefined') {
         return;
     }
     
-    // Auto-connect points using nearest neighbor
-    var connectedPoints = autoConnectPoints(perimeterPoints);
-    console.log('Connected points:', connectedPoints.length);
-    
-    // Convert points to Leaflet format [lat, lng]
-    var leafletPoints = connectedPoints.map(function(p) { 
-        return [p.lat, p.lng]; 
+    riders.forEach(function(rider) {
+        // Check if rider has location data (even if offline)
+        if (!rider.has_location || !rider.lat || !rider.lng) return;
+        
+        // Get geofence status from API or calculate it
+        var status = (rider.geofence && rider.geofence.status) ? 
+                     rider.geofence.status : 
+                     GeofenceMap.evaluate(rider.lat, rider.lng, savedPerimeterPoints).status;
+        
+        var key = String(rider.id);
+        
+        // Store the geofence status on the rider object
+        rider.geofence_status = status;
+        
+        if (status === 'outside') {
+            // Show alert for both online AND offline riders
+            GeofenceMap.handleStatusChange('outside', key, geofenceAlertState, {
+                title: 'Perimeter Breach',
+                text: rider.fullname + ' is outside the perimeter (Last known location)'
+            });
+        } else if (status === 'warning') {
+            geofenceAlertState[key] = 'warning';
+        } else if (status === 'inside') {
+            geofenceAlertState[key] = 'inside';
+        }
     });
+}
+
+function updateMap() {
+    fetch('../api/get-all-locations.php?t=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+    })
+    .then(function(response) { 
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json(); 
+    })
+    .then(function(data) {
+        // Update markers
+        updateRiderMarkers(data);
+        
+        // ✅ Check vibration alerts
+        checkVibrationAlerts(data);
+        
+        // ✅ Check geofence alerts
+        saveGeofenceAlerts(data);
+    })
+    .catch(function(error) {
+        console.error('Error updating map:', error);
+    });
+}
+
+// ✅ BAGONG FUNCTION - Mag-save ng alerts sa database
+function saveGeofenceAlerts(riders) {
+    if (!savedPerimeterPoints || savedPerimeterPoints.length < 3 || typeof GeofenceMap === 'undefined') {
+        return;
+    }
     
-    console.log('Leaflet points:', leafletPoints);
-    
-    // Draw the perimeter polygon with HIGH VISIBILITY
+    riders.forEach(function(rider) {
+        if (!rider.has_location || !rider.lat || !rider.lng) return;
+        
+        var status = GeofenceMap.evaluate(rider.lat, rider.lng, savedPerimeterPoints).status;
+        rider.geofence_status = status;
+        
+        if (status === 'outside') {
+            // I-save sa database
+            fetch('../api/save-alert.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rider_id: rider.id,
+                    rider_name: rider.fullname,
+                    ebike_id: rider.ebike_id || 'N/A',
+                    latitude: rider.lat,
+                    longitude: rider.lng,
+                    is_online: rider.is_online ? 1 : 0
+                })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                console.log('Alert saved:', data);
+            })
+            .catch(function(error) {
+                console.error('Error saving alert:', error);
+            });
+        }
+    });
+}
+
+// ---------- Perimeter functions ----------
+function nearestNeighborConnect(points) {
+    if (points.length < 3) return points;
+    var remaining = points.map(function(p, idx) { return { lat: p.lat, lng: p.lng, index: idx }; });
+    var sorted = [remaining[0]];
+    remaining.splice(0, 1);
+    while (remaining.length > 0) {
+        var last = sorted[sorted.length - 1];
+        var nearestIdx = 0;
+        var nearestDist = Infinity;
+        for (var i = 0; i < remaining.length; i++) {
+            var dx = remaining[i].lat - last.lat;
+            var dy = remaining[i].lng - last.lng;
+            var dist = dx * dx + dy * dy;
+            if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; }
+        }
+        sorted.push(remaining[nearestIdx]);
+        remaining.splice(nearestIdx, 1);
+    }
+    return sorted.map(function(p) { return { lat: p.lat, lng: p.lng }; });
+}
+
+function autoConnectPoints(points) {
+    if (points.length < 3) return points;
+    return nearestNeighborConnect(points);
+}
+
+function clearPerimeterLayers() {
+    if (perimeterPolygon) { map.removeLayer(perimeterPolygon); perimeterPolygon = null; }
+    if (perimeterGlowPolygon) { map.removeLayer(perimeterGlowPolygon); perimeterGlowPolygon = null; }
+    if (restrictedAreaPolygon) { map.removeLayer(restrictedAreaPolygon); restrictedAreaPolygon = null; }
+}
+
+function drawPerimeterLayers(isPreview) {
+    isPreview = !!isPreview;
+    clearPerimeterLayers();
+    if (draftPolyline && editingMode) { map.removeLayer(draftPolyline); draftPolyline = null; }
+    if (!perimeterPoints || perimeterPoints.length < 3) {
+        if (editingMode) drawDraftLayer();
+        return;
+    }
+    var connectedPoints = isPreview ? perimeterPoints : autoConnectPoints(perimeterPoints);
+    var leafletPoints = connectedPoints.map(function(p) { return [p.lat, p.lng]; });
+    if (editingMode) {
+        draftPolyline = L.polyline(leafletPoints.concat([leafletPoints[0]]), {
+            color: '#F59E0B', weight: 4, dashArray: '10, 8', opacity: 0.95, interactive: false
+        }).addTo(map);
+        return;
+    }
     perimeterPolygon = L.polygon(leafletPoints, {
-        color: '#F59E0B',
-        weight: 5,
-        opacity: 1.0,
-        fill: false,
-        interactive: false,
-        smoothFactor: 1,
-        className: 'perimeter-line',
-        stroke: true,
-        dashArray: null
+        color: '#F59E0B', weight: 5, opacity: 1.0, fill: false, interactive: false, className: 'perimeter-line'
     }).addTo(map);
-    
-    // Add a glow effect by drawing a thicker transparent line behind it
-    var glowPolygon = L.polygon(leafletPoints, {
-        color: '#F59E0B',
-        weight: 12,
-        opacity: 0.2,
-        fill: false,
-        interactive: false,
-        smoothFactor: 1
+    perimeterGlowPolygon = L.polygon(leafletPoints, {
+        color: '#F59E0B', weight: 12, opacity: 0.2, fill: false, interactive: false
     }).addTo(map);
-    // Store reference to glow polygon to remove later
-    perimeterPolygon._glow = glowPolygon;
-    
-    // Create restricted area (outside perimeter) - red semi-transparent overlay
     var outerBounds = [[90, -180], [90, 180], [-90, 180], [-90, -180]];
-    var holePoints = leafletPoints.slice().reverse();
-    
-    restrictedAreaPolygon = L.polygon([outerBounds, holePoints], {
-        stroke: false,
-        fillColor: '#EF4444',
-        fillOpacity: 0.10,
-        interactive: false,
-        smoothFactor: 1
+    restrictedAreaPolygon = L.polygon([outerBounds, leafletPoints.slice().reverse()], {
+        stroke: false, fillColor: '#EF4444', fillOpacity: 0.10, interactive: false
     }).addTo(map);
-    
-    console.log('Perimeter drawn successfully with', leafletPoints.length, 'points');
-    
-    // Also ensure draft line is removed when we have a proper perimeter
-    if(draftPolyline) {
-        map.removeLayer(draftPolyline);
-        draftPolyline = null;
-    }
-    
-    // Zoom to fit the perimeter
-    if (leafletPoints.length > 0) {
-        var bounds = L.latLngBounds(leafletPoints);
-        map.fitBounds(bounds, { padding: [50, 50] });
-    }
 }
 
 function drawDraftLayer() {
-    if(draftPolyline) {
-        map.removeLayer(draftPolyline);
-        draftPolyline = null;
-    }
-    
-    if(editingMode && perimeterPoints.length >= 2) {
-        var leafletPoints = perimeterPoints.map(function(p) { 
-            return [p.lat, p.lng]; 
-        });
-        
-        draftPolyline = L.polyline(leafletPoints, {
-            color: '#3B82F6',
-            weight: 3,
-            dashArray: '8, 6',
-            opacity: 0.8,
-            interactive: false,
-            smoothFactor: 1
-        }).addTo(map);
-    }
+    if (draftPolyline) { map.removeLayer(draftPolyline); draftPolyline = null; }
+    if (!editingMode || perimeterPoints.length < 2) return;
+    draftPolyline = L.polyline(perimeterPoints.map(function(p) { return [p.lat, p.lng]; }), {
+        color: '#3B82F6', weight: 3, dashArray: '8, 6', opacity: 0.8, interactive: false
+    }).addTo(map);
 }
 
 function createDraggableMarker(point, index) {
@@ -1379,132 +1745,28 @@ function createDraggableMarker(point, index) {
         icon: L.divIcon({
             className: 'perimeter-marker-draggable',
             html: '<div class="marker-inner">' + (index + 1) + '</div>',
-            iconSize: [22, 22],
-            iconAnchor: [11, 11]
+            iconSize: [22, 22], iconAnchor: [11, 11]
         }),
-        draggable: true,
-        autoPan: true,
-        autoPanSpeed: 10
+        draggable: true, autoPan: false
     });
-
-    marker.on('dragstart', function() {
-        var el = marker.getElement();
-        if (el) {
-            var inner = el.querySelector('.marker-inner');
-            if (inner) inner.classList.add('dragging');
-        }
-    });
-
     marker.on('drag', function(e) {
-        var latlng = e.latlng;
-        perimeterPoints[index] = { lat: latlng.lat, lng: latlng.lng };
-        drawPerimeterLayers();
-        drawDraftLayer();
+        perimeterPoints[index] = { lat: e.latlng.lat, lng: e.latlng.lng };
+        if (perimeterPoints.length >= 3) drawPerimeterLayers(true);
+        else drawDraftLayer();
         updatePerimeterStatusDisplay();
-        updatePointLabels();
     });
-
-    marker.on('dragend', function() {
-        var el = marker.getElement();
-        if (el) {
-            var inner = el.querySelector('.marker-inner');
-            if (inner) inner.classList.remove('dragging');
-        }
-        showToast('Point ' + (index + 1) + ' repositioned');
-    });
-
-    marker.on('contextmenu', function(e) {
-        L.DomEvent.stopPropagation(e);
-        if(editingMode) {
-            if (confirm('Remove point ' + (index + 1) + '?')) {
-                perimeterPoints.splice(index, 1);
-                updateAllMarkers();
-                drawDraftLayer();
-                drawPerimeterLayers();
-                updatePerimeterStatusDisplay();
-                showToast('Point ' + (index + 1) + ' removed');
-            }
-        }
-    });
-
     return marker;
-}
-
-function createFixedMarker(point, index) {
-    var marker = L.marker([point.lat, point.lng], {
-        icon: L.divIcon({
-            className: 'perimeter-point-fixed',
-            html: '<div class="point-inner">' + (index + 1) + '</div>',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7]
-        }),
-        interactive: false,
-        zIndexOffset: 500
-    });
-    marker.bindTooltip('Point ' + (index + 1), { permanent: false, direction: 'top' });
-    return marker;
-}
-
-function updatePointLabels() {
-    pointMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    pointMarkers = [];
-    
-    if(!editingMode || perimeterPoints.length === 0) return;
-    
-    perimeterPoints.forEach(function(point, idx) {
-        var label = L.marker([point.lat, point.lng], {
-            icon: L.divIcon({
-                className: 'point-label',
-                html: '<div style="background:#3B82F6;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;opacity:0.85;border:1px solid rgba(255,255,255,0.3);">'+(idx+1)+'</div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            }),
-            interactive: false,
-            zIndexOffset: 1000
-        }).addTo(map);
-        pointMarkers.push(label);
-    });
 }
 
 function updateAllMarkers() {
-    // Remove existing markers
-    dragMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    fixedMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    pointMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    dragMarkers = [];
-    fixedMarkers = [];
-    pointMarkers = [];
-
+    dragMarkers.forEach(function(m) { if(m && map.hasLayer(m)) map.removeLayer(m); });
+    fixedMarkers.forEach(function(m) { if(m && map.hasLayer(m)) map.removeLayer(m); });
+    pointMarkers.forEach(function(m) { if(m && map.hasLayer(m)) map.removeLayer(m); });
+    dragMarkers = []; fixedMarkers = []; pointMarkers = [];
     if(editingMode) {
-        // Show draggable markers in editing mode
         perimeterPoints.forEach(function(point, idx) {
-            var dragMarker = createDraggableMarker(point, idx);
-            dragMarker.addTo(map);
-            dragMarkers.push(dragMarker);
-        });
-        updatePointLabels();
-    } else {
-        // Show fixed markers in view mode
-        perimeterPoints.forEach(function(point, idx) {
-            var fixedMarker = createFixedMarker(point, idx);
-            fixedMarker.addTo(map);
-            fixedMarkers.push(fixedMarker);
+            var dm = createDraggableMarker(point, idx);
+            dm.addTo(map); dragMarkers.push(dm);
         });
     }
 }
@@ -1513,40 +1775,19 @@ function updatePerimeterStatusDisplay() {
     var statusText = document.getElementById('perimeterStatus');
     if(statusText) {
         if(perimeterPoints.length === 0) {
-            statusText.value = 'No perimeter points saved — tap map to add';
+            statusText.value = 'No perimeter points saved';
         } else {
-            var pts = perimeterPoints.map(function(p,i) {
-                return (i+1)+': '+p.lat.toFixed(4)+', '+p.lng.toFixed(4);
-            }).join('\n');
-            statusText.value = perimeterPoints.length + ' points saved\n' + pts;
+            statusText.value = perimeterPoints.length + ' points saved';
         }
-    }
-    var modeSpan = document.getElementById('editModeStatus');
-    if(modeSpan) {
-        modeSpan.textContent = editingMode ? '✏️ Editing: ON — drag points to move, long-tap to remove' : '✏️ Editing: OFF';
     }
 }
 
 function loadSavedPerimeter() {
-    // Load saved points from PHP
     perimeterPoints = JSON.parse(JSON.stringify(savedPerimeterPoints));
-    
-    console.log('Loading perimeter with ' + perimeterPoints.length + ' points');
-    console.log('Points:', perimeterPoints);
-    
     if(perimeterPoints && perimeterPoints.length >= 3) {
-        // Auto-connect saved points to ensure clean perimeter
         perimeterPoints = autoConnectPoints(perimeterPoints);
-        drawPerimeterLayers();
-        console.log('Perimeter drawn with ' + perimeterPoints.length + ' points');
-    } else if(perimeterPoints && perimeterPoints.length > 0 && perimeterPoints.length < 3) {
-        console.log('Not enough points to draw perimeter (need at least 3, have ' + perimeterPoints.length + ')');
-        showToast('Need at least 3 points to form a perimeter');
-    } else {
-        console.log('No saved perimeter points');
+        drawPerimeterLayers(false);
     }
-    
-    // Always show markers for saved points (even if less than 3)
     updateAllMarkers();
     updatePerimeterStatusDisplay();
 }
@@ -1554,100 +1795,63 @@ function loadSavedPerimeter() {
 function startEditingMode() {
     editingMode = true;
     updateAllMarkers();
-    drawDraftLayer();
-    drawPerimeterLayers();
-    updatePerimeterStatusDisplay();
+    drawPerimeterLayers(true);
     map.getContainer().style.cursor = 'crosshair';
-    showToast('Editing mode ON — tap map to add points');
 }
 
 function stopEditingMode(savePoints) {
     editingMode = false;
-    // Clear markers
-    dragMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    pointMarkers.forEach(function(marker) { 
-        if(marker && map.hasLayer(marker)) {
-            map.removeLayer(marker); 
-        }
-    });
-    dragMarkers = [];
-    pointMarkers = [];
-    
-    if(draftPolyline) {
-        map.removeLayer(draftPolyline);
-        draftPolyline = null;
-    }
+    dragMarkers.forEach(function(m) { if(m && map.hasLayer(m)) map.removeLayer(m); });
+    pointMarkers.forEach(function(m) { if(m && map.hasLayer(m)) map.removeLayer(m); });
+    dragMarkers = []; pointMarkers = [];
+    if(draftPolyline) { map.removeLayer(draftPolyline); draftPolyline = null; }
     map.getContainer().style.cursor = '';
-    
     if(savePoints) {
-        // Save points to savedPerimeterPoints
         savedPerimeterPoints = JSON.parse(JSON.stringify(perimeterPoints));
-        drawPerimeterLayers();
-        // Show fixed markers
+        drawPerimeterLayers(false);
         updateAllMarkers();
     } else {
-        // Discard changes
         perimeterPoints = JSON.parse(JSON.stringify(savedPerimeterPoints));
-        drawPerimeterLayers();
+        drawPerimeterLayers(false);
         updateAllMarkers();
     }
     updatePerimeterStatusDisplay();
-    showToast('Editing mode OFF');
 }
 
-// ---------- Init map ----------
 function initMap() {
-    console.log('Initializing map...');
-    var defaultCenter = [14.5995, 120.9842];
-    if(savedPerimeterPoints && savedPerimeterPoints.length) {
-        defaultCenter = [savedPerimeterPoints[0].lat, savedPerimeterPoints[0].lng];
-        console.log('Centering on first point:', defaultCenter);
-    }
+    // ✅ MAS MALAWAK NA BOUNDS (kasama ang buong Cebu Province)
+    var cebuProvinceBounds = L.latLngBounds(
+        [9.5, 123.3],  // Southwest corner (malapit sa Santander)
+        [11.5, 124.5]  // Northeast corner (malapit sa Bantayan Island)
+    );
+    
     map = L.map('map', { 
         zoomControl: true, 
         attributionControl: false,
-        zoom: 13
-    }).setView(defaultCenter, 13);
+        maxBounds: cebuProvinceBounds,  // ✅ Mas malawak na bounds
+        maxBoundsViscosity: 0.5
+    }).setView(GeofenceMap.BANTAYAN_CENTER, GeofenceMap.BANTAYAN_ZOOM);
     
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '', subdomains: 'abcd', maxZoom: 19
+    var mapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
     }).addTo(map);
     
-    console.log('Map initialized, loading saved perimeter...');
-    
-    // Load and display saved perimeter
     loadSavedPerimeter();
-    
-    // Force a redraw after a short delay to ensure everything renders
-    setTimeout(function() {
-        if(map) {
-            map.invalidateSize();
-            drawPerimeterLayers();
-            console.log('Forced perimeter redraw');
-        }
-    }, 500);
+    setTimeout(function() { updateMap(); }, 1000);
     
     map.on('click', function(e) {
         if(editingMode) {
             perimeterPoints.push({lat: e.latlng.lat, lng: e.latlng.lng});
-            // Auto-connect points to prevent crossing
-            perimeterPoints = autoConnectPoints(perimeterPoints);
             updateAllMarkers();
-            drawDraftLayer();
-            drawPerimeterLayers();
+            if (perimeterPoints.length >= 3) drawPerimeterLayers(true);
+            else drawDraftLayer();
             updatePerimeterStatusDisplay();
-            showToast('Point ' + perimeterPoints.length + ' added');
         }
     });
 }
 
-// ---------- DOM ready ----------
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing...');
     initMap();
     updateMap();
 
@@ -1659,10 +1863,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function tickCountdown() {
         countdown--;
         if(countdown < 0) countdown = INTERVAL;
-        var pct = (countdown / INTERVAL) * 100;
-        if(refreshBar) refreshBar.style.width = pct + '%';
+        if(refreshBar) refreshBar.style.width = (countdown / INTERVAL) * 100 + '%';
         if(countLabel) countLabel.textContent = countdown + 's';
     }
+    
+    // ✅ AUTO-REFRESH every 5 seconds
     setInterval(updateMap, 5000);
     setInterval(tickCountdown, 1000);
 
@@ -1675,114 +1880,47 @@ document.addEventListener('DOMContentLoaded', function() {
     function setZonePanelOpen(isOpen) {
         if(!zonePanel || !btnToggle) return;
         zonePanel.classList.toggle('open', isOpen);
-        btnToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         if(isOpen && !editingMode) startEditingMode();
         else if(!isOpen && editingMode) stopEditingMode(true);
     }
 
-    btnToggle.addEventListener('click', function() {
-        setZonePanelOpen(!zonePanel.classList.contains('open'));
-    });
-    btnClose.addEventListener('click', function() {
-        setZonePanelOpen(false);
-    });
+    btnToggle.addEventListener('click', function() { setZonePanelOpen(!zonePanel.classList.contains('open')); });
+    btnClose.addEventListener('click', function() { setZonePanelOpen(false); });
     
     btnClear.addEventListener('click', function() {
         Swal.fire({
             title: 'Clear All Points?',
             text: 'This will permanently remove all saved perimeter points.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#EF4444',
-            cancelButtonColor: '#1E293B',
-            confirmButtonText: 'Clear All',
-            cancelButtonText: 'Cancel',
-            background: '#111827',
-            color: '#F1F5F9'
+            icon: 'warning', showCancelButton: true,
+            confirmButtonColor: '#EF4444', cancelButtonColor: '#1E293B',
+            confirmButtonText: 'Clear All', cancelButtonText: 'Cancel',
+            background: '#111827', color: '#F1F5F9'
         }).then(function(result) {
             if (result.isConfirmed) {
                 perimeterPoints = [];
-                if(editingMode) { 
-                    updateAllMarkers(); 
-                    drawDraftLayer(); 
-                }
-                drawPerimeterLayers();
+                drawPerimeterLayers(editingMode);
                 updatePerimeterStatusDisplay();
-                
-                // Update hidden input and save to database
                 document.getElementById('perimeterPointsInput').value = JSON.stringify([]);
                 document.getElementById('perimeterForm').submit();
-                
-                showToast('All points cleared');
             }
         });
     });
 
     var perimeterForm = document.getElementById('perimeterForm');
-    var perimeterPointsInput = document.getElementById('perimeterPointsInput');
-    
     perimeterForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Auto-connect before saving
-        if (perimeterPoints.length >= 3) {
-            perimeterPoints = autoConnectPoints(perimeterPoints);
-        }
-        
-        perimeterPointsInput.value = JSON.stringify(perimeterPoints);
-        savedPerimeterPoints = JSON.parse(JSON.stringify(perimeterPoints));
-        
-        var formData = new FormData(perimeterForm);
-        
-        Swal.fire({
-            title: 'Saving Perimeter...',
-            text: 'Please wait while your perimeter is being saved',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            willOpen: function() {
-                Swal.showLoading();
-            },
-            background: '#111827',
-            color: '#F1F5F9'
-        });
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            body: formData
-        })
-        .then(function(response) {
-            window.location.reload();
-        })
-        .catch(function(error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Save Failed',
-                text: 'There was an error saving your perimeter. Please try again.',
-                background: '#111827',
-                color: '#F1F5F9',
-                confirmButtonColor: '#3B82F6',
-                confirmButtonText: 'OK'
-            });
-        });
+        if (perimeterPoints.length >= 3) perimeterPoints = autoConnectPoints(perimeterPoints);
+        document.getElementById('perimeterPointsInput').value = JSON.stringify(perimeterPoints);
+        perimeterForm.submit();
     });
 
-    // Legend toggle
     var legendFloat = document.getElementById('zone-legend-float');
-    var btnToggleLegend = document.getElementById('btn-toggle-legend');
-    btnToggleLegend.addEventListener('click', function() {
+    document.getElementById('btn-toggle-legend').addEventListener('click', function() {
         legendFloat.classList.toggle('collapsed');
-        btnToggleLegend.setAttribute('aria-expanded', legendFloat.classList.contains('collapsed') ? 'false' : 'true');
     });
-
-    // Force map resize after all elements are rendered
-    setTimeout(function() { 
-        if(map) {
-            map.invalidateSize();
-            drawPerimeterLayers();
-            console.log('Final map resize and redraw');
-        }
-    }, 800);
 });
 </script>
+<!-- Global Alert Widget -->
+<script src="../assets/js/global-alert-widget.js"></script>
 </body>
 </html>

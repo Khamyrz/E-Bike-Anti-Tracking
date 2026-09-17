@@ -11,6 +11,17 @@ $face_unauthorized       = false;
 $show_admin_login_modal  = false;
 $show_sweet_alert        = false;
 $sweet_alert_data        = [];
+$face_retry              = false;
+$face_retry_message      = "";
+
+if (isset($_GET['returned']) && $_GET['returned'] === '1') {
+    $show_sweet_alert = true;
+    $sweet_alert_data = [
+        'icon'  => 'success',
+        'title' => 'E-Bike Returned',
+        'text'  => 'Your E-Bike has been returned successfully. Your account has been removed. Please ask the administrator to register you again before logging in.',
+    ];
+}
 
 // ── Admin login ─────────────────────────────────
 if(isset($_POST['login']))
@@ -58,9 +69,12 @@ if(isset($_POST['face_login']))
         $message = "Face scan failed. Please try again with good lighting.";
         $show_sweet_alert = true;
         $sweet_alert_data = ['icon'=>'error','title'=>'Scan Failed','text'=>$message];
+        $face_retry = true;
+        $face_retry_message = "⚠️ Face detection failed. Please ensure good lighting and try again.";
     }
     else
     {
+        // Check if any riders exist
         $count_check  = $conn->query("SELECT COUNT(*) AS total FROM users WHERE role='rider' AND status='approved' AND face_data IS NOT NULL AND face_data!=''");
         $count_row    = $count_check->fetch_assoc();
         $total_riders = $count_row['total'] ?? 0;
@@ -70,29 +84,96 @@ if(isset($_POST['face_login']))
             $face_unauthorized = true;
             $show_sweet_alert  = true;
             $sweet_alert_data  = ['icon'=>'error','title'=>'No Riders Found','text'=>'No riders registered. Contact administrator.'];
+            $face_retry = true;
+            $face_retry_message = "⚠️ No registered riders found. Please contact administrator.";
         }
         else
         {
+            // ================================================================
+            // SECURITY: Try to find a match using STRICT comparison
+            // ================================================================
             $match = face_find_registered_match($conn, $captured_descriptor);
+            
             if($match)
             {
-                $_SESSION['rider']      = $match['id'];
-                $_SESSION['rider_name'] = $match['fullname'];
-                $_SESSION['face_login'] = true;
-                rider_set_online($conn, $match['id'], 'login');
-                $show_sweet_alert = true;
-                $sweet_alert_data = [
-                    'icon'     => 'success',
-                    'title'    => 'Welcome ' . $match['fullname'] . '!',
-                    'text'     => 'Redirecting to dashboard...',
-                    'redirect' => 'rider/dashboard.php'
-                ];
+                // ================================================================
+                // Fetch the full rider data including status
+                // ================================================================
+                $rider_stmt = $conn->prepare("
+                    SELECT id, fullname, email, ebike_id, face_data, status, phone, address
+                    FROM users 
+                    WHERE id = ? AND role = 'rider'
+                ");
+                $rider_stmt->bind_param('i', $match['id']);
+                $rider_stmt->execute();
+                $rider_result = $rider_stmt->get_result();
+                $full_rider = $rider_result->fetch_assoc();
+                $rider_stmt->close();
+                
+                // ================================================================
+                // SECURITY: Verify the rider exists and is approved
+                // ================================================================
+                if(!$full_rider)
+                {
+                    $face_unauthorized = true;
+                    $show_sweet_alert  = true;
+                    $sweet_alert_data  = ['icon'=>'error','title'=>'Account Error','text'=>'Rider account not found. Please contact administrator.'];
+                    $face_retry = true;
+                    $face_retry_message = "⚠️ Account error. Please contact administrator.";
+                }
+                elseif($full_rider['status'] !== 'approved')
+                {
+                    $face_unauthorized = true;
+                    $show_sweet_alert  = true;
+                    $sweet_alert_data  = ['icon'=>'error','title'=>'Account Not Approved','text'=>'Your account is pending approval. Contact administrator.'];
+                    $face_retry = true;
+                    $face_retry_message = "⚠️ Account pending approval. Please contact administrator.";
+                }
+                else
+                {
+                    // ================================================================
+                    // SUCCESS: Valid face match with approved rider
+                    // ================================================================
+                    $_SESSION['rider']      = (int)$full_rider['id'];
+                    $_SESSION['rider_name'] = $full_rider['fullname'];
+                    $_SESSION['rider_email'] = $full_rider['email'];
+                    $_SESSION['rider_ebike_id'] = $full_rider['ebike_id'];
+                    $_SESSION['face_login'] = true;
+                    $_SESSION['face_verified_at'] = time();
+                    
+                    rider_set_online($conn, $full_rider['id'], 'login');
+                    
+                    $show_sweet_alert = true;
+                    $sweet_alert_data = [
+                        'icon'     => 'success',
+                        'title'    => 'Welcome ' . $full_rider['fullname'] . '!',
+                        'text'     => 'Biometric verification successful. Redirecting to dashboard...',
+                        'redirect' => 'rider/dashboard.php'
+                    ];
+                    
+                    // Log successful login
+                    error_log("Face login successful: Rider #{$full_rider['id']} ({$full_rider['fullname']}) - Distance: " . number_format($match['distance'], 6));
+                }
             }
             else
             {
+                // ================================================================
+                // SECURITY: No match found - reject access with retry option
+                // ================================================================
                 $face_unauthorized = true;
                 $show_sweet_alert  = true;
-                $sweet_alert_data  = ['icon'=>'error','title'=>'Unauthorized Face','text'=>'Face not registered. Contact admin.'];
+                $sweet_alert_data  = [
+                    'icon'=>'error',
+                    'title'=>'Access Denied',
+                    'text'=>'Face not recognized. Please ensure you are registered and try again with better lighting.'
+                ];
+                
+                // Set retry flag for frontend
+                $face_retry = true;
+                $face_retry_message = "❌ Face not recognized. Please try again with better lighting and face centered.";
+                
+                // Log failed attempt for security audit
+                error_log('Failed face login attempt: No matching rider found');
             }
         }
     }
@@ -154,6 +235,7 @@ if($admin_count_result && $admin_count_result->num_rows > 0)
     --accent-green:  #10B981;
     --accent-red:    #EF4444;
     --accent-purple: #8B5CF6;
+    --accent-orange: #F59E0B;
     --text-primary:  #F1F5F9;
     --text-secondary:#94A3B8;
     --text-muted:    #475569;
@@ -191,7 +273,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     background: #000A18;
 }
 
-/* video sits as base layer */
 .holo-wrap video {
     position: absolute;
     inset: 0; width: 100%; height: 100%;
@@ -200,7 +281,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     z-index: 1;
 }
 
-/* canvas for mesh drawing — sits above video */
 .holo-wrap canvas.mesh-canvas {
     position: absolute;
     inset: 0; width: 100%; height: 100%;
@@ -209,10 +289,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     border-radius: 16px;
 }
 
-/* capture canvas (hidden, used only for snapshot) */
 .holo-wrap canvas.snap-canvas { display: none; }
 
-/* preview image shown after capture */
 .holo-wrap img.preview-img {
     position: absolute;
     inset: 0; width: 100%; height: 100%;
@@ -226,7 +304,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .holo-wrap.has-photo canvas.mesh-canvas { display: none; }
 .holo-wrap.has-photo img.preview-img    { display: block; }
 
-/* dark vignette */
 .holo-wrap::before {
     content: '';
     position: absolute; inset: 0;
@@ -236,7 +313,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     pointer-events: none;
 }
 
-/* SVG corners + frame overlay — sits above vignette */
 .holo-frame-svg {
     position: absolute;
     inset: 0; width: 100%; height: 100%;
@@ -245,7 +321,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     overflow: visible;
 }
 
-/* Corner bracket lines */
 .holo-corner {
     fill: none;
     stroke-width: 2.5;
@@ -253,7 +328,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     transition: stroke 0.35s ease;
 }
 
-/* Rotating outer ring */
 .holo-outer-ring {
     fill: none;
     stroke-width: 0.7;
@@ -263,7 +337,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     transform-box: fill-box;
 }
 
-/* Side ticks */
 .holo-tick {
     stroke-width: 1.2;
     stroke-linecap: square;
@@ -271,13 +344,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     opacity: 0.5;
 }
 
-/* Scanline */
 .holo-scanline-rect {
     opacity: 0;
     transition: opacity 0.3s;
 }
 
-/* State colours */
 .state-idle   .holo-corner      { stroke: #00BFFF; }
 .state-idle   .holo-outer-ring  { stroke: rgba(0,191,255,0.35); }
 .state-idle   .holo-tick        { stroke: #00BFFF; }
@@ -303,17 +374,20 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .state-fail   .holo-tick        { stroke: #FF4444; }
 .state-fail   .holo-scanline-rect { opacity: 0; }
 
-/* Idle corner pulse */
+.state-retry  .holo-corner      { stroke: #F59E0B; }
+.state-retry  .holo-outer-ring  { stroke: rgba(245,158,11,0.4); }
+.state-retry  .holo-tick        { stroke: #F59E0B; }
+.state-retry  .holo-scanline-rect { opacity: 0; }
+
 .state-idle .holo-corner { animation: cornerPulse 1.8s ease-in-out infinite; }
 @keyframes cornerPulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
-/* Ring spin always when not captured */
 .state-idle .holo-outer-ring,
 .state-detect .holo-outer-ring,
-.state-noface .holo-outer-ring { animation: ringRotate 8s linear infinite; }
+.state-noface .holo-outer-ring,
+.state-retry .holo-outer-ring { animation: ringRotate 8s linear infinite; }
 @keyframes ringRotate { to { transform: rotate(360deg); } }
 
-/* Scanline sweep */
 @keyframes scanSweep {
     0%   { transform: translateY(0); opacity:0.7; }
     48%  { opacity:0.7; }
@@ -323,7 +397,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 }
 .state-idle .holo-scanline-rect { animation: scanSweep 2.2s linear infinite; }
 
-/* ── Status bar ── */
 .biometric-status-bar {
     display: flex; align-items: center; justify-content: center;
     gap: 10px; margin-top: 14px; padding: 10px 16px;
@@ -334,19 +407,19 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .led-blue  { background:#00BFFF; box-shadow:0 0 10px rgba(0,191,255,0.6); }
 .led-green { background:#00FF88; box-shadow:0 0 14px rgba(0,255,136,0.7); animation: ledPulse 0.7s ease-in-out infinite; }
 .led-red   { background:#FF4444; box-shadow:0 0 10px rgba(255,68,68,0.6); animation: ledPulse 1s ease-in-out infinite; }
+.led-orange{ background:#F59E0B; box-shadow:0 0 10px rgba(245,158,11,0.6); animation: ledPulse 0.8s ease-in-out infinite; }
 @keyframes ledPulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
 .status-text { font-size: 12px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.2px; }
 .status-text .c-blue  { color: #00BFFF; font-weight: 600; }
 .status-text .c-green { color: #00FF88; font-weight: 600; }
 .status-text .c-red   { color: #FF5555; font-weight: 600; }
+.status-text .c-orange{ color: #F59E0B; font-weight: 600; }
 
-/* ── Progress ── */
 .progress-wrap { height: 3px; background: var(--bg-surface); border-radius: 2px; overflow: hidden; opacity: 0; transition: opacity 0.3s; margin-top: 10px; }
 .progress-wrap.show { opacity: 1; }
 .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg,#00BFFF,#00FF88); border-radius: 2px; transition: width 0.1s linear; }
 
-/* ── Retake button ── */
 .btn-retake {
     display: block; width: 100%; margin-top: 14px;
     padding: 12px 16px; border-radius: 10px;
@@ -355,15 +428,41 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
 .btn-retake:hover { background: var(--bg-card-hover); border-color: var(--accent-blue); color: var(--text-primary); }
+.btn-retake.retry { border-color: var(--accent-orange); color: var(--accent-orange); }
+.btn-retake.retry:hover { background: rgba(245,158,11,0.1); border-color: var(--accent-orange); }
 
 .face-instruction { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 16px; line-height: 1.6; }
 .face-instruction strong { color: var(--text-secondary); }
 .face-instruction .ag { color: #00FF88; font-weight: 600; }
 .face-instruction .ar { color: #FF5555; font-weight: 600; }
+.face-instruction .ao { color: #F59E0B; font-weight: 600; }
+
+.retry-message-box {
+    display: <?php echo $face_retry ? 'block' : 'none'; ?>;
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent-orange);
+    font-size: 13px;
+    text-align: center;
+    animation: fadeInDown 0.5s ease;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 .page-footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 24px; padding: 16px 0; border-top: 1px solid var(--border); }
 
-/* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(11,17,32,0.75); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 1000; backdrop-filter: blur(4px); }
 .modal-card { width: 100%; max-width: 380px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .modal-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
@@ -385,6 +484,19 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.auto-retry-badge {
+    display: <?php echo $face_retry ? 'inline-flex' : 'none'; ?>;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent-orange);
+    font-size: 11px;
+    font-weight: 600;
+}
+
 @media (max-width: 640px) {
     .top-header { padding: 12px 16px; }
     .brand-wordmark { font-size: 20px; }
@@ -392,6 +504,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     .form-card { padding: 0; }
     .holo-wrap { max-height: 280px; }
     .scanner-container { padding: 16px; }
+    .retry-message-box { font-size: 12px; padding: 10px 14px; }
 }
 </style>
 </head>
@@ -416,7 +529,12 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <div class="form-card">
 
         <div class="form-heading">Rider Sign In</div>
-        <div class="form-subheading">Holographic Biometric Recognition</div>
+        <div class="form-subheading">
+            Holographic Biometric Recognition
+            <span class="auto-retry-badge" id="autoRetryBadge">
+                ⟳ Auto-Retry Enabled
+            </span>
+        </div>
 
         <form method="POST" id="faceLoginForm">
             <input type="hidden" name="face_login" value="1">
@@ -424,22 +542,13 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
             <div class="scanner-container">
 
-                <!-- Scanner viewport -->
                 <div class="holo-wrap state-idle" id="holoWrap">
 
-                    <!-- Live video feed -->
                     <video id="loginVideo" autoplay playsinline muted></video>
-
-                    <!-- Canvas: live holographic mesh drawn here each frame -->
                     <canvas id="meshCanvas" class="mesh-canvas"></canvas>
-
-                    <!-- Canvas: used only for snapshot (hidden) -->
                     <canvas id="snapCanvas" class="snap-canvas"></canvas>
-
-                    <!-- Preview image shown after capture -->
                     <img id="previewImg" class="preview-img" alt="Captured">
 
-                    <!-- Static SVG: corner brackets + outer ring + ticks + scanline -->
                     <svg class="holo-frame-svg" id="holoFrameSvg"
                          viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
 
@@ -452,32 +561,26 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
                             </linearGradient>
                         </defs>
 
-                        <!-- Outer rotating dashed ring -->
                         <circle class="holo-outer-ring" cx="200" cy="150" r="118"/>
 
-                        <!-- Corner brackets -->
                         <polyline class="holo-corner" points="50,95 50,62 85,62"/>
                         <polyline class="holo-corner" points="315,62 350,62 350,95"/>
                         <polyline class="holo-corner" points="50,205 50,238 85,238"/>
                         <polyline class="holo-corner" points="315,238 350,238 350,205"/>
 
-                        <!-- Side ticks left -->
                         <line class="holo-tick" x1="50" y1="128" x2="66" y2="128"/>
                         <line class="holo-tick" x1="50" y1="150" x2="60" y2="150"/>
                         <line class="holo-tick" x1="50" y1="172" x2="66" y2="172"/>
-                        <!-- Side ticks right -->
                         <line class="holo-tick" x1="334" y1="128" x2="350" y2="128"/>
                         <line class="holo-tick" x1="340" y1="150" x2="350" y2="150"/>
                         <line class="holo-tick" x1="334" y1="172" x2="350" y2="172"/>
 
-                        <!-- Scanline (animated via CSS) -->
                         <rect class="holo-scanline-rect" x="66" y="62" width="268" height="10"
                               fill="url(#slGrad)" rx="2"/>
 
                     </svg>
                 </div>
 
-                <!-- Status bar -->
                 <div class="biometric-status-bar">
                     <span class="status-led led-blue" id="statusLed"></span>
                     <span class="status-text" id="statusText">
@@ -485,21 +588,25 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
                     </span>
                 </div>
 
-                <!-- Stability progress bar -->
                 <div class="progress-wrap" id="progressWrap">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
 
-                <!-- Retake button (hidden until after a failed attempt) -->
-                <button type="button" class="btn-retake" id="retakeBtn" style="display:none">
-                    ⟳ Retake — Try Again
+                <!-- Retry Message -->
+                <div class="retry-message-box" id="retryMessageBox">
+                    <?php echo htmlspecialchars($face_retry_message); ?>
+                    <br><small style="opacity:0.7;">Please try again. The scanner will auto-retry.</small>
+                </div>
+
+                <button type="button" class="btn-retake <?php echo $face_retry ? 'retry' : ''; ?>" id="retakeBtn" style="<?php echo $face_retry ? 'display:block;' : 'display:none;'; ?>">
+                    <?php echo $face_retry ? '⟳ Retry — Scan Again' : '⟳ Retake — Try Again'; ?>
                 </button>
 
             </div>
 
             <div class="face-instruction">
                 <strong>Look directly at the camera.</strong> The holographic mesh activates when your face is detected.<br>
-                <span class="ag">Green mesh</span> = identity verified &nbsp;|&nbsp; <span class="ar">Red mesh</span> = face not registered
+                <span class="ag">Green mesh</span> = identity verified &nbsp;|&nbsp; <span class="ar">Red mesh</span> = face not registered &nbsp;|&nbsp; <span class="ao">Orange mesh</span> = retry mode
             </div>
 
         </form>
@@ -560,10 +667,10 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-/* ─── Modal helpers ──────────────────────────────────────────── */
 var adminModal      = document.getElementById('adminModal');
 var adminLoginModal = document.getElementById('adminLoginModal');
 var hasAdmin        = <?php echo $has_admin ? 'true' : 'false'; ?>;
+var faceRetry       = <?php echo $face_retry ? 'true' : 'false'; ?>;
 
 function pauseScanner(){
     if(typeof rafId!=='undefined'&&rafId){ cancelAnimationFrame(rafId); rafId=null; }
@@ -626,7 +733,6 @@ adminLoginModal.addEventListener('click',function(e){ if(e.target===adminLoginMo
 })();
 <?php endif; ?>
 
-/* ─── Secret admin tap ───────────────────────────────────────── */
 (function(){
     var taps=0, firstT=0, lastE=0;
     function onTap(e){
@@ -642,7 +748,6 @@ adminLoginModal.addEventListener('click',function(e){ if(e.target===adminLoginMo
     });
 })();
 
-/* ─── DOM refs ───────────────────────────────────────────────── */
 var holoWrap      = document.getElementById('holoWrap');
 var video         = document.getElementById('loginVideo');
 var meshCanvas    = document.getElementById('meshCanvas');
@@ -655,20 +760,20 @@ var statusText    = document.getElementById('statusText');
 var progressWrap  = document.getElementById('progressWrap');
 var progressBar   = document.getElementById('progressBar');
 var retakeBtn     = document.getElementById('retakeBtn');
+var retryMessageBox = document.getElementById('retryMessageBox');
 
-/* ─── State ─────────────────────────────────────────────────── */
 var stream        = null;
 var modelsReady   = false;
-var rafId         = null;        // requestAnimationFrame id for mesh loop
-var scanTimer     = null;        // stability counter interval
+var rafId         = null;
+var scanTimer     = null;
 var stableFrames  = 0;
-var NEED_STABLE   = 4;           // consecutive detections needed
+var NEED_STABLE   = 4;
 var capturing     = false;
 var done          = false;
+var retryMode     = faceRetry;
 var mCtx          = meshCanvas.getContext('2d');
 
-/* ─── Hologram state switcher ────────────────────────────────── */
-var STATES = ['state-idle','state-detect','state-noface','state-ok','state-fail'];
+var STATES = ['state-idle','state-detect','state-noface','state-ok','state-fail','state-retry'];
 function setState(s, ledCls, html){
     STATES.forEach(function(c){ holoWrap.classList.remove(c); });
     holoWrap.classList.add(s);
@@ -676,7 +781,16 @@ function setState(s, ledCls, html){
     statusText.innerHTML = html;
 }
 
-/* ─── Resize mesh canvas to match video display size ─────────── */
+// If retry mode is active, show retry state
+if (retryMode) {
+    setState('state-retry', 'led-orange', 
+        '<span class="c-orange">⟳</span> Auto-retry mode — scanning again...');
+    retakeBtn.style.display = 'block';
+    retakeBtn.classList.add('retry');
+    retakeBtn.textContent = '⟳ Retry — Scan Again';
+    retryMessageBox.style.display = 'block';
+}
+
 function syncCanvasSize(){
     var rect = video.getBoundingClientRect();
     if(rect.width > 0 && meshCanvas.width !== rect.width){
@@ -685,42 +799,28 @@ function syncCanvasSize(){
     }
 }
 
-/* ─── Draw holographic mesh from face-api landmarks ──────────── */
-/*
- *  face-api.js 68-point landmark indices:
- *  0-16  jaw line
- *  17-21 left eyebrow
- *  22-26 right eyebrow
- *  27-30 nose bridge
- *  31-35 nose bottom
- *  36-41 left eye
- *  42-47 right eye
- *  48-67 mouth / lips
- *
- *  We project from the video's natural resolution to the canvas display size.
- */
 function drawMesh(landmarks, color){
     syncCanvasSize();
     mCtx.clearRect(0, 0, meshCanvas.width, meshCanvas.height);
 
-    var pts = landmarks.positions; // array of {x,y} in video-resolution coords
+    var pts = landmarks.positions;
     var scaleX = meshCanvas.width  / video.videoWidth;
     var scaleY = meshCanvas.height / video.videoHeight;
 
     function pt(i){ return { x: pts[i].x * scaleX, y: pts[i].y * scaleY }; }
 
-    var alpha       = color === 'green' ? 0.75 : 0.80;
-    var lineAlpha   = color === 'green' ? 0.55 : 0.60;
-    var dotColor    = color === 'green' ? 'rgba(0,255,136,' + alpha + ')' : 'rgba(255,68,68,' + alpha + ')';
-    var lineColor   = color === 'green' ? 'rgba(0,255,136,' + lineAlpha + ')' : 'rgba(255,68,68,' + lineAlpha + ')';
-    var glowColor   = color === 'green' ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,68,0.15)';
+    var alpha       = color === 'green' ? 0.75 : (color === 'orange' ? 0.75 : 0.80);
+    var lineAlpha   = color === 'green' ? 0.55 : (color === 'orange' ? 0.55 : 0.60);
+    var dotColor    = color === 'green' ? 'rgba(0,255,136,' + alpha + ')' : 
+                      (color === 'orange' ? 'rgba(245,158,11,' + alpha + ')' : 'rgba(255,68,68,' + alpha + ')');
+    var lineColor   = color === 'green' ? 'rgba(0,255,136,' + lineAlpha + ')' : 
+                      (color === 'orange' ? 'rgba(245,158,11,' + lineAlpha + ')' : 'rgba(255,68,68,' + lineAlpha + ')');
 
     mCtx.strokeStyle = lineColor;
     mCtx.lineWidth   = 0.9;
     mCtx.lineCap     = 'round';
     mCtx.lineJoin    = 'round';
 
-    /* Helper: draw a connected polyline through index array */
     function polyline(indices, close){
         mCtx.beginPath();
         var p = pt(indices[0]); mCtx.moveTo(p.x, p.y);
@@ -729,7 +829,6 @@ function drawMesh(landmarks, color){
         mCtx.stroke();
     }
 
-    /* Helper: draw a single line segment */
     function line(a,b){
         mCtx.beginPath();
         var pa=pt(a), pb=pt(b);
@@ -737,55 +836,32 @@ function drawMesh(landmarks, color){
         mCtx.stroke();
     }
 
-    /* ── Jaw contour ── */
     polyline([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
-
-    /* ── Eyebrows ── */
     polyline([17,18,19,20,21]);
     polyline([22,23,24,25,26]);
-
-    /* ── Nose bridge ── */
     polyline([27,28,29,30]);
-
-    /* ── Nose bottom ── */
     polyline([31,32,33,34,35]);
-
-    /* ── Eyes ── */
     polyline([36,37,38,39,40,41], true);
     polyline([42,43,44,45,46,47], true);
-
-    /* ── Outer lips ── */
     polyline([48,49,50,51,52,53,54,55,56,57,58,59], true);
-
-    /* ── Inner lips ── */
     polyline([60,61,62,63,64,65,66,67], true);
 
-    /* ── Triangulation cross-lines for mesh look ── */
-    // Forehead to brow
     line(27,21); line(27,22);
-    // Brow to eye corners
     line(17,36); line(26,45);
     line(21,39); line(22,42);
-    // Nose bridge to eyes
     line(27,39); line(27,42);
-    // Nose tip to mouth
     line(30,48); line(30,54);
     line(33,51); line(33,57);
-    // Cheek triangles
     line(0,36);  line(16,45);
     line(1,41);  line(15,46);
     line(4,48);  line(12,54);
     line(6,58);  line(10,56);
     line(3,31);  line(13,35);
-    // Jaw to mouth corners
     line(6,48);  line(10,54);
-    // Mid-face verticals
     line(8,57); line(8,51);
-    // Eye to cheekbone
     line(41,31); line(46,35);
     line(37,19); line(44,24);
 
-    /* ── Glow dots on every landmark ── */
     mCtx.fillStyle = dotColor;
     mCtx.shadowColor = dotColor;
     mCtx.shadowBlur  = 6;
@@ -803,7 +879,6 @@ function clearMesh(){
     mCtx.clearRect(0, 0, meshCanvas.width, meshCanvas.height);
 }
 
-/* ─── Camera + model boot ────────────────────────────────────── */
 function startCamera(){
     if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream=null; }
     if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
@@ -811,9 +886,20 @@ function startCamera(){
     stableFrames=0; capturing=false; done=false;
     holoWrap.classList.remove('has-photo');
     previewImg.removeAttribute('src');
-    retakeBtn.style.display='none';
 
-    setState('state-idle','led-blue','<span class="c-blue">■</span> Initializing camera...');
+    // Reset retry mode if we're starting fresh
+    if (!retryMode) {
+        retakeBtn.style.display = 'none';
+        retakeBtn.classList.remove('retry');
+        retryMessageBox.style.display = 'none';
+    } else {
+        retakeBtn.style.display = 'block';
+        retakeBtn.classList.add('retry');
+        retakeBtn.textContent = '⟳ Retry — Scan Again';
+        retryMessageBox.style.display = 'block';
+        setState('state-retry', 'led-orange', 
+            '<span class="c-orange">⟳</span> Auto-retry mode — scanning again...');
+    }
 
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
         Swal.fire({icon:'error',title:'Camera Not Supported',text:'Camera not supported in this browser.',confirmButtonColor:'#3B82F6'});
@@ -824,12 +910,20 @@ function startCamera(){
         .then(function(s){
             stream = s;
             video.srcObject = s;
-            setState('state-idle','led-blue','<span class="c-blue">■</span> Loading face recognition engine...');
+            if (!retryMode) {
+                setState('state-idle','led-blue','<span class="c-blue">■</span> Loading face recognition engine...');
+            } else {
+                setState('state-retry','led-orange','<span class="c-orange">⟳</span> Retrying face recognition...');
+            }
             return FaceRecognition.loadModels();
         })
         .then(function(){
             modelsReady = true;
-            setState('state-idle','led-blue','<span class="c-blue">■</span> Holographic scanner active');
+            if (!retryMode) {
+                setState('state-idle','led-blue','<span class="c-blue">■</span> Holographic scanner active');
+            } else {
+                setState('state-retry','led-orange','<span class="c-orange">⟳</span> Auto-retry active — scanning...');
+            }
             startMeshLoop();
         })
         .catch(function(err){
@@ -839,16 +933,8 @@ function startCamera(){
         });
 }
 
-/* ─── Live mesh render loop (requestAnimationFrame) ──────────── */
-/*
- *  Every frame:
- *   1. Run face-api detectAllFaces with landmarks (tiny model, fast)
- *   2. If face found → draw green mesh, increment stability counter
- *   3. When stability reaches threshold → auto-capture
- *   4. If no face → draw nothing, show red state, reset counter
- */
 var lastDetectAt = 0;
-var DETECT_INTERVAL = 120; // ms between detections (don't hammer CPU)
+var DETECT_INTERVAL = 120;
 var lastLandmarks   = null;
 var lastHadFace     = false;
 
@@ -864,15 +950,14 @@ function startMeshLoop(){
 
         var now = Date.now();
         if(now - lastDetectAt < DETECT_INTERVAL){
-            // Between detections: redraw last known landmarks so mesh doesn't flicker
             if(lastLandmarks && lastHadFace){
-                drawMesh(lastLandmarks, 'green');
+                var color = retryMode ? 'orange' : 'green';
+                drawMesh(lastLandmarks, color);
             }
             return;
         }
         lastDetectAt = now;
 
-        // Run detection
         faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5}))
             .withFaceLandmarks()
             .then(function(result){
@@ -888,12 +973,22 @@ function startMeshLoop(){
                     progressBar.style.width = pct + '%';
 
                     if(stableFrames >= NEED_STABLE){
-                        // Stable enough — capture
+                        // Reset retry mode on successful capture
+                        retryMode = false;
+                        retakeBtn.style.display = 'none';
+                        retakeBtn.classList.remove('retry');
+                        retryMessageBox.style.display = 'none';
                         triggerCapture(result.landmarks);
                     } else {
-                        drawMesh(result.landmarks, 'green');
-                        setState('state-detect','led-green',
-                            '<span class="c-green">■</span> Face detected — locking on... (' + stableFrames + '/' + NEED_STABLE + ')');
+                        var color = retryMode ? 'orange' : 'green';
+                        drawMesh(result.landmarks, color);
+                        if (retryMode) {
+                            setState('state-retry','led-orange',
+                                '<span class="c-orange">⟳</span> Retry: Face detected — locking on... (' + stableFrames + '/' + NEED_STABLE + ')');
+                        } else {
+                            setState('state-detect','led-green',
+                                '<span class="c-green">■</span> Face detected — locking on... (' + stableFrames + '/' + NEED_STABLE + ')');
+                        }
                     }
                 } else {
                     lastLandmarks = null;
@@ -902,7 +997,11 @@ function startMeshLoop(){
                     clearMesh();
                     progressWrap.classList.remove('show');
                     progressBar.style.width = '0%';
-                    setState('state-noface','led-red','<span class="c-red">■</span> No face detected — adjust position');
+                    if (retryMode) {
+                        setState('state-retry','led-orange','<span class="c-orange">⟳</span> Retry: No face detected — adjust position');
+                    } else {
+                        setState('state-noface','led-red','<span class="c-red">■</span> No face detected — adjust position');
+                    }
                 }
             });
     }
@@ -910,7 +1009,6 @@ function startMeshLoop(){
     loop();
 }
 
-/* ─── Auto-capture & submit ──────────────────────────────────── */
 function triggerCapture(landmarks){
     if(capturing || done) return;
     capturing = true;
@@ -919,12 +1017,11 @@ function triggerCapture(landmarks){
     setState('state-detect','led-green','<span class="c-green">■</span> Biometric locked — extracting descriptor...');
     progressBar.style.width = '100%';
 
-    // Draw final green mesh on snapshot
-    drawMesh(landmarks, 'green');
+    var color = retryMode ? 'orange' : 'green';
+    drawMesh(landmarks, color);
 
     FaceRecognition.extractFromVideo(video)
         .then(function(result){
-            // Snapshot the frame
             snapCanvas.width  = video.videoWidth;
             snapCanvas.height = video.videoHeight;
             snapCanvas.getContext('2d').drawImage(video, 0, 0);
@@ -933,7 +1030,6 @@ function triggerCapture(landmarks){
 
             descInput.value = JSON.stringify(result.descriptor);
 
-            // Show green "verified" state — will flip to red if server returns unregistered
             setState('state-ok','led-green','<span class="c-green">■</span> Identity verified — submitting...');
             done = true;
             clearMesh();
@@ -947,28 +1043,45 @@ function triggerCapture(landmarks){
             progressWrap.classList.remove('show');
             progressBar.style.width = '0%';
 
-            // Draw red mesh to signal failure
+            // Set retry mode on failure
+            retryMode = true;
+            retakeBtn.style.display = 'block';
+            retakeBtn.classList.add('retry');
+            retakeBtn.textContent = '⟳ Retry — Scan Again';
+            retryMessageBox.style.display = 'block';
+
             if(err && err.landmarks){
                 drawMesh(err.landmarks, 'red');
             } else {
                 clearMesh();
             }
 
-            setState('state-fail','led-red','<span class="c-red">■</span> Extraction failed — please retry');
-            retakeBtn.style.display = 'block';
-            Swal.fire({icon:'error',title:'Scan Failed',
-                text: err.message || 'Could not extract face data. Try again with better lighting.',
-                confirmButtonColor:'#3B82F6'});
+            setState('state-retry','led-orange','<span class="c-orange">⟳</span> Extraction failed — auto-retry enabled');
+            Swal.fire({
+                icon:'error',
+                title:'Scan Failed',
+                text: err.message || 'Could not extract face data. Auto-retry activated. Please try again.',
+                confirmButtonColor:'#3B82F6',
+                timer: 2000,
+                timerProgressBar: true
+            }).then(function() {
+                // Auto-retry: restart the scanner
+                startCamera();
+            });
         });
 }
 
-/* ─── Retake button ──────────────────────────────────────────── */
 retakeBtn.addEventListener('click', function(){
     descInput.value = '';
+    retryMode = true;
+    retakeBtn.style.display = 'block';
+    retakeBtn.classList.add('retry');
+    retakeBtn.textContent = '⟳ Retry — Scan Again';
+    retryMessageBox.style.display = 'block';
+    setState('state-retry','led-orange','<span class="c-orange">⟳</span> Manual retry — restarting scanner...');
     startCamera();
 });
 
-/* ─── Form guard ─────────────────────────────────────────────── */
 form.addEventListener('submit', function(e){
     if(!descInput.value){
         e.preventDefault();
@@ -976,7 +1089,6 @@ form.addEventListener('submit', function(e){
     }
 });
 
-/* ─── Boot ───────────────────────────────────────────────────── */
 startCamera();
 window.addEventListener('beforeunload', function(){
     if(stream) stream.getTracks().forEach(function(t){ t.stop(); });

@@ -1,0 +1,386 @@
+/**
+ * ================================================================
+ * E-Bike Tracker - ESP32 + GPS NEO-6M + SIM A7670C
+ * Version: 8.0 - HOSTED SERVER (ebike-tracker.xo.je)
+ * ================================================================
+ * 
+ * Changes:
+ * - ✅ Naka-configure para sa hosted website (ebike-tracker.xo.je)
+ * - ✅ Hindi na kailangan ng ngrok
+ * - ✅ Direktang HTTPS connection sa hosted server
+ * ================================================================
+ */
+
+#include <TinyGPS++.h>
+#include <HardwareSerial.h>
+
+// ========== SERVER CONFIGURATION (HOSTED WEBSITE) ==========
+const char* SERVER_URL = "ebike-gps.xo.je";
+const char* API_ENDPOINT = "/api/device-gps-update.php";
+const int SERVER_PORT = 443;  // HTTPS port
+
+// ========== DEVICE AUTHENTICATION ==========
+const char* DEVICE_ID = "EBIKE0001";
+const char* API_TOKEN = "3140793ab777b71b228d457520c0b0c7";
+
+// ========== GPS PINS ==========
+const int GPS_RX_PIN = 16;
+const int GPS_TX_PIN = 17;
+const int GPS_BAUD = 9600;
+
+// ========== A7670C PINS ==========
+const int A7670C_RX_PIN = 25;
+const int A7670C_TX_PIN = 26;
+const int A7670C_PEN_PIN = 27;
+const int A7670C_PWK_PIN = 14;
+const int A7670C_BAUD = 115200;
+
+// ========== LED ==========
+const int LED_PIN = 2;
+
+// ========== TIMING ==========
+const unsigned long UPDATE_INTERVAL = 10000;  // 10 seconds
+const unsigned long GPS_TIMEOUT = 60000;
+const unsigned long RECONNECT_INTERVAL = 30000;  // 30 seconds
+
+// ========== GLOBAL VARIABLES ==========
+TinyGPSPlus gps;
+HardwareSerial gpsSerial(2);
+HardwareSerial cellularSerial(1);
+
+bool gpsHasFix = false;
+float currentLat = 0.0;
+float currentLng = 0.0;
+int currentSatellites = 0;
+
+bool cellularConnected = false;
+
+unsigned long lastUpdateMillis = 0;
+unsigned long lastReconnectAttempt = 0;
+
+int successfulUpdates = 0;
+int failedUpdates = 0;
+
+// ========== LED FUNCTIONS ==========
+void blinkSuccess() {
+    digitalWrite(LED_PIN, HIGH);
+    delay(200);
+    digitalWrite(LED_PIN, LOW);
+}
+
+void blinkError() {
+    digitalWrite(LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(LED_PIN, LOW);
+    delay(100);
+    digitalWrite(LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(LED_PIN, LOW);
+}
+
+// ========== A7670C FUNCTIONS ==========
+
+void a7670cPowerOn() {
+    pinMode(A7670C_PEN_PIN, OUTPUT);
+    pinMode(A7670C_PWK_PIN, OUTPUT);
+    digitalWrite(A7670C_PEN_PIN, HIGH);
+    delay(1000);
+    digitalWrite(A7670C_PWK_PIN, HIGH);
+    delay(1000);
+    digitalWrite(A7670C_PWK_PIN, LOW);
+    delay(5000);
+}
+
+String sendAT(String cmd, int timeout = 3000) {
+    cellularSerial.println(cmd);
+    String resp = "";
+    unsigned long start = millis();
+    
+    while (millis() - start < timeout) {
+        if (cellularSerial.available()) {
+            resp += (char)cellularSerial.read();
+        }
+        delay(1);
+    }
+    
+    return resp;
+}
+
+bool initCellular() {
+    Serial.println("\n📡 Initializing A7670C...");
+    
+    pinMode(A7670C_PEN_PIN, OUTPUT);
+    pinMode(A7670C_PWK_PIN, OUTPUT);
+    digitalWrite(A7670C_PEN_PIN, LOW);
+    digitalWrite(A7670C_PWK_PIN, LOW);
+    
+    a7670cPowerOn();
+    
+    cellularSerial.begin(A7670C_BAUD, SERIAL_8N1, A7670C_RX_PIN, A7670C_TX_PIN);
+    delay(2000);
+    
+    // Test AT
+    String resp = sendAT("AT", 3000);
+    if (resp.indexOf("OK") < 0) {
+        Serial.println("❌ A7670C not responding");
+        return false;
+    }
+    Serial.println("✅ A7670C responding");
+    
+    // Check SIM
+    resp = sendAT("AT+CPIN?", 3000);
+    if (resp.indexOf("READY") >= 0) {
+        Serial.println("✅ SIM ready");
+    } else {
+        Serial.println("⚠️ SIM not ready, continuing anyway...");
+    }
+    
+    // Wait for network registration
+    bool registered = false;
+    for (int i = 0; i < 30; i++) {
+        resp = sendAT("AT+CREG?", 2000);
+        if (resp.indexOf("+CREG: 0,1") >= 0 || 
+            resp.indexOf("+CREG: 0,5") >= 0 ||
+            resp.indexOf("+CREG: 1,1") >= 0 ||
+            resp.indexOf("+CREG: 1,5") >= 0) {
+            registered = true;
+            break;
+        }
+        delay(1000);
+    }
+    
+    if (!registered) {
+        Serial.println("❌ Network registration failed");
+        return false;
+    }
+    Serial.println("✅ Network registered!");
+    
+    // Configure HTTP para sa HTTPS
+    sendAT("AT+HTTPINIT", 3000);
+    delay(1000);
+    sendAT("AT+HTTPPARA=\"CID\",1", 2000);
+    delay(1000);
+    
+    // ✅ ENABLE SSL para sa HTTPS
+    sendAT("AT+HTTPSSL=1", 3000);
+    delay(1000);
+    
+    // ✅ SET SSL CONFIG para sa hosted server
+    sendAT("AT+SSLCFG=\"sslversion\",0,\"ALL\"", 3000);
+    delay(500);
+    sendAT("AT+SSLCFG=\"authmode\",0,\"NONE\"", 3000);
+    delay(500);
+    sendAT("AT+SSLCFG=\"ignorelocaltime\",0,\"1\"", 3000);
+    delay(500);
+    
+    Serial.println("✅ A7670C initialized for HTTPS!");
+    cellularConnected = true;
+    return true;
+}
+
+// ✅ UPDATED: Send function para sa hosted server
+bool sendToServer() {
+    if (!cellularConnected) return false;
+    
+    Serial.println("📤 Sending data to server...");
+    
+    // Build URL para sa hosted server
+    String url = String(API_ENDPOINT);
+    url += "?device_id=" + String(DEVICE_ID);
+    url += "&token=" + String(API_TOKEN);
+    
+    if (gpsHasFix) {
+        url += "&lat=" + String(currentLat, 6);
+        url += "&lng=" + String(currentLng, 6);
+        url += "&speed=0&battery=100&vibration=0&satellites=" + String(currentSatellites);
+    } else {
+        url += "&battery=100&vibration=0&satellites=0";
+    }
+    
+    // ✅ SET URL (walang SERVER_URL prefix, diretso na sa endpoint)
+    sendAT("AT+HTTPPARA=\"URL\",\"https://" + String(SERVER_URL) + url + "\"", 5000);
+    delay(500);
+    
+    // ✅ Execute GET request
+    String resp = sendAT("AT+HTTPACTION=0", 20000);
+    
+    if (resp.indexOf("200") >= 0 || resp.indexOf("201") >= 0) {
+        successfulUpdates++;
+        Serial.println("✅ Data sent successfully!");
+        
+        // ✅ Read response (optional)
+        String response = sendAT("AT+HTTPREAD", 3000);
+        if (response.length() > 0) {
+            Serial.print("Server response: ");
+            Serial.println(response);
+        }
+        
+        blinkSuccess();
+        return true;
+    }
+    
+    failedUpdates++;
+    Serial.println("❌ Failed to send data");
+    Serial.print("HTTP Response: ");
+    Serial.println(resp);
+    
+    blinkError();
+    return false;
+}
+
+void processGPS() {
+    while (gpsSerial.available() > 0) {
+        if (gps.encode(gpsSerial.read())) {
+            if (gps.location.isValid() && gps.location.age() < 2000) {
+                if (!gpsHasFix) {
+                    Serial.println("\n🎯 GPS FIX ACQUIRED!");
+                    Serial.printf("📍 Location: %.6f, %.6f\n", 
+                        gps.location.lat(), 
+                        gps.location.lng());
+                }
+                gpsHasFix = true;
+                currentLat = gps.location.lat();
+                currentLng = gps.location.lng();
+                currentSatellites = gps.satellites.value();
+            }
+        }
+        delay(1);
+    }
+    
+    // Check kung nawala ang GPS fix
+    static unsigned long lastGpsCheck = 0;
+    if (millis() - lastGpsCheck >= GPS_TIMEOUT) {
+        lastGpsCheck = millis();
+        if (gps.location.age() > 3000) {
+            gpsHasFix = false;
+            Serial.println("⚠️ GPS signal lost");
+        }
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    delay(2000);
+    
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
+    
+    Serial.println("\n╔══════════════════════════════════════════╗");
+    Serial.println("║  E-BIKE TRACKER v8.0                     ║");
+    Serial.println("║  HOSTED SERVER - ebike-tracker.xo.je     ║");
+    Serial.println("╠══════════════════════════════════════════╣");
+    Serial.print("║  Device: ");
+    Serial.print(DEVICE_ID);
+    Serial.println("                          ║");
+    Serial.print("║  Server: ");
+    Serial.print(SERVER_URL);
+    Serial.println("          ║");
+    Serial.println("╚══════════════════════════════════════════╝");
+    
+    Serial.println("\n📡 Initializing GPS...");
+    gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    Serial.println("✅ GPS initialized");
+    
+    if (initCellular()) {
+        Serial.println("\n✅ Cellular Ready!");
+    } else {
+        Serial.println("\n❌ Cellular Failed! Will retry...");
+    }
+    
+    Serial.println("\n💡 Commands: status, send, help");
+    Serial.println("📍 System Ready!\n");
+    
+    // ✅ TEST CONNECTION SA HOSTED SERVER
+    Serial.println("🔍 Testing connection to hosted server...");
+    if (sendToServer()) {
+        Serial.println("✅ Connected to ebike-tracker.xo.je!");
+    } else {
+        Serial.println("⚠️ Cannot connect to server. Check your connection.");
+    }
+}
+
+void loop() {
+    processGPS();
+    
+    // Reconnect kung kailangan (kada 30 seconds)
+    if (!cellularConnected) {
+        if (millis() - lastReconnectAttempt >= RECONNECT_INTERVAL) {
+            lastReconnectAttempt = millis();
+            Serial.println("\n🔄 Reconnecting cellular...");
+            if (initCellular()) {
+                Serial.println("✅ Reconnected!");
+            }
+        }
+    }
+    
+    // Send data every 10 seconds
+    if (millis() - lastUpdateMillis >= UPDATE_INTERVAL) {
+        lastUpdateMillis = millis();
+        
+        if (cellularConnected) {
+            sendToServer();
+        } else {
+            Serial.println("⚠️ Cellular not connected, skipping update");
+        }
+    }
+    
+    // Heartbeat print every 60 seconds
+    static unsigned long lastHeartbeatPrint = 0;
+    if (millis() - lastHeartbeatPrint >= 60000) {
+        lastHeartbeatPrint = millis();
+        Serial.println("💓 ESP32 alive - Sent: " + String(successfulUpdates) + " OK, " + String(failedUpdates) + " FAIL");
+        Serial.print("   GPS: ");
+        Serial.println(gpsHasFix ? "✅ FIX" : "❌ NO FIX");
+        if (gpsHasFix) {
+            Serial.printf("   Location: %.6f, %.6f\n", currentLat, currentLng);
+        }
+    }
+    
+    // Serial commands
+    if (Serial.available()) {
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+        cmd.toLowerCase();
+        
+        if (cmd == "status" || cmd == "s") {
+            Serial.println("\n--- STATUS ---");
+            Serial.print("Server: ");
+            Serial.println(SERVER_URL);
+            Serial.print("Cellular: ");
+            Serial.println(cellularConnected ? "✅ Connected" : "❌ Disconnected");
+            Serial.print("GPS: ");
+            Serial.println(gpsHasFix ? "✅ FIX" : "❌ NO FIX");
+            if (gpsHasFix) {
+                Serial.printf("Lat: %.6f, Lng: %.6f\n", currentLat, currentLng);
+                Serial.print("Sats: ");
+                Serial.println(currentSatellites);
+            }
+            Serial.print("Sent: ");
+            Serial.print(successfulUpdates);
+            Serial.print(" OK, ");
+            Serial.print(failedUpdates);
+            Serial.println(" FAIL");
+        }
+        else if (cmd == "send" || cmd == "x") {
+            if (sendToServer()) {
+                Serial.println("✅ Sent!");
+            } else {
+                Serial.println("❌ Failed!");
+            }
+        }
+        else if (cmd == "test" || cmd == "t") {
+            Serial.println("🔍 Testing server connection...");
+            sendToServer();
+        }
+        else if (cmd == "help" || cmd == "h") {
+            Serial.println("\n=== COMMANDS ===");
+            Serial.println("status/s  - Status");
+            Serial.println("send/x    - Force send");
+            Serial.println("test/t    - Test connection");
+            Serial.println("help/h    - Help");
+            Serial.println("================\n");
+        }
+    }
+    
+    delay(10);
+}

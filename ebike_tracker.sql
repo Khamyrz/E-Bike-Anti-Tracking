@@ -1,0 +1,1672 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Sep 11, 2026 at 09:07 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `ebike_tracker`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `devices`
+--
+
+CREATE TABLE `devices` (
+  `id` int(11) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `device_id` varchar(32) NOT NULL,
+  `api_token` varchar(64) NOT NULL,
+  `device_type` varchar(50) DEFAULT 'esp32',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `last_seen_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `devices`
+--
+
+INSERT INTO `devices` (`id`, `rider_id`, `device_id`, `api_token`, `device_type`, `is_active`, `last_seen_at`, `created_at`, `updated_at`) VALUES
+(3, 11, 'EBIKE0002', '698d46a8dc2d284998a01bdb0e22629b', 'esp32', 1, '2026-09-11 15:07:08', '2026-06-19 07:42:24', '2026-09-11 07:07:08'),
+(4, 12, 'EBIKE0001', '3140793ab777b71b228d457520c0b0c7', 'esp32', 1, NULL, '2026-06-19 07:42:24', '2026-08-24 17:54:38');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `device_status`
+--
+
+CREATE TABLE `device_status` (
+  `id` int(11) NOT NULL,
+  `device_id` varchar(32) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `is_connected` tinyint(1) DEFAULT 0,
+  `last_gps_fix` datetime DEFAULT NULL,
+  `last_data_sent` datetime DEFAULT NULL,
+  `signal_strength` int(11) DEFAULT 0,
+  `battery_level` varchar(10) DEFAULT '100',
+  `firmware_version` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gps_locations`
+--
+
+CREATE TABLE `gps_locations` (
+  `id` int(11) NOT NULL,
+  `device_id` varchar(50) DEFAULT NULL,
+  `lat` decimal(10,8) DEFAULT NULL,
+  `lng` decimal(11,8) DEFAULT NULL,
+  `speed` decimal(5,2) DEFAULT NULL,
+  `battery` int(11) DEFAULT NULL,
+  `vibration` tinyint(1) DEFAULT 0,
+  `satellites` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gps_logs`
+--
+
+CREATE TABLE `gps_logs` (
+  `id` int(11) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  `altitude` float DEFAULT NULL,
+  `speed` varchar(20) DEFAULT NULL,
+  `course` float DEFAULT NULL,
+  `device_type` varchar(20) DEFAULT 'esp32',
+  `battery` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `vibration` tinyint(1) DEFAULT 0,
+  `satellites` int(11) DEFAULT 0,
+  `hdop` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `gps_logs`
+--
+
+INSERT INTO `gps_logs` (`id`, `rider_id`, `latitude`, `longitude`, `altitude`, `speed`, `course`, `device_type`, `battery`, `created_at`, `vibration`, `satellites`, `hdop`) VALUES
+(41, 5, 11.29652448, 123.73137976, NULL, '0', NULL, 'esp32', '100', '2026-06-12 01:21:32', 0, 0, NULL),
+(42, 5, 11.29652448, 123.73137976, NULL, '0', NULL, 'esp32', '100', '2026-06-12 01:21:33', 0, 0, NULL),
+(43, 5, 11.29652704, 123.73150319, NULL, '0', NULL, 'esp32', '100', '2026-06-12 01:23:35', 0, 0, NULL),
+(44, 5, 11.29596050, 123.73699869, NULL, '0', NULL, 'esp32', '100', '2026-06-12 05:59:08', 0, 0, NULL),
+(45, 5, 11.29596050, 123.73699869, NULL, '0', NULL, 'esp32', '100', '2026-06-12 05:59:22', 0, 0, NULL),
+(46, 5, 11.29595673, 123.73711680, NULL, '0', NULL, 'esp32', '100', '2026-06-12 06:00:52', 0, 0, NULL),
+(47, 5, 11.29597641, 123.73704517, NULL, '0', NULL, 'esp32', '100', '2026-06-12 06:01:15', 0, 0, NULL),
+(48, 5, 11.29594439, 123.73713922, NULL, '0', NULL, 'esp32', '100', '2026-06-12 06:06:15', 0, 0, NULL),
+(49, 5, 11.29654048, 123.73157167, NULL, '0', NULL, 'esp32', '100', '2026-06-12 06:26:29', 0, 0, NULL),
+(50, 5, 11.29652759, 123.73156668, NULL, '0', NULL, 'esp32', '100', '2026-06-16 05:32:22', 0, 0, NULL),
+(51, 5, 11.29652759, 123.73156668, NULL, '0', NULL, 'esp32', '100', '2026-06-16 05:32:26', 0, 0, NULL),
+(54, 11, 11.29565000, 123.73087000, NULL, '25', NULL, 'esp32', '85', '2026-08-24 17:54:39', 0, 8, NULL),
+(55, 12, 11.29600000, 123.73100000, NULL, '30', NULL, 'esp32', '90', '2026-08-24 17:54:39', 0, 7, NULL),
+(56, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:09:55', 0, 0, NULL),
+(57, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:10:04', 0, 0, NULL),
+(58, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:10:16', 0, 0, NULL),
+(59, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:10:22', 0, 0, NULL),
+(60, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:10:51', 0, 0, NULL),
+(61, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:04', 0, 0, NULL),
+(62, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:13', 0, 0, NULL),
+(63, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:17', 0, 0, NULL),
+(64, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:23', 0, 0, NULL),
+(65, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:34', 0, 0, NULL),
+(66, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:47', 0, 0, NULL),
+(67, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:49', 0, 0, NULL),
+(68, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:11:56', 0, 0, NULL),
+(69, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:06', 0, 0, NULL),
+(70, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:16', 0, 0, NULL),
+(71, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:22', 0, 0, NULL),
+(72, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:28', 0, 0, NULL),
+(73, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:38', 0, 0, NULL),
+(74, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:47', 0, 0, NULL),
+(75, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:12:56', 0, 0, NULL),
+(76, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:13:00', 0, 0, NULL),
+(77, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:13:32', 0, 0, NULL),
+(78, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:13:42', 0, 0, NULL),
+(79, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:13:52', 0, 0, NULL),
+(80, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:13:56', 0, 0, NULL),
+(81, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:14:05', 0, 0, NULL),
+(82, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:14:13', 0, 0, NULL),
+(83, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:14:41', 0, 0, NULL),
+(84, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:14:50', 0, 0, NULL),
+(85, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:01', 0, 0, NULL),
+(86, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:12', 0, 0, NULL),
+(87, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:13', 0, 0, NULL),
+(88, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:24', 0, 0, NULL),
+(89, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:32', 0, 0, NULL),
+(90, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:39', 0, 0, NULL),
+(91, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:45', 0, 0, NULL),
+(92, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:15:54', 0, 0, NULL),
+(93, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:04', 0, 0, NULL),
+(94, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:12', 0, 0, NULL),
+(95, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:20', 0, 0, NULL),
+(96, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:27', 0, 0, NULL),
+(97, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:41', 0, 0, NULL),
+(98, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:46', 0, 0, NULL),
+(99, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:54', 0, 0, NULL),
+(100, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:16:59', 0, 0, NULL),
+(101, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:17:07', 0, 0, NULL),
+(102, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:17:18', 0, 0, NULL),
+(103, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:17:28', 0, 0, NULL),
+(104, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:17:34', 0, 0, NULL),
+(105, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:18:19', 0, 0, NULL),
+(106, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:18:30', 0, 0, NULL),
+(107, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:18:40', 0, 0, NULL),
+(108, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:18:43', 0, 0, NULL),
+(109, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:18:50', 0, 0, NULL),
+(110, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:01', 0, 0, NULL),
+(111, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:12', 0, 0, NULL),
+(112, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:17', 0, 0, NULL),
+(113, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:25', 0, 0, NULL),
+(114, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:32', 0, 0, NULL),
+(115, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:19:42', 0, 0, NULL),
+(116, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:06', 0, 0, NULL),
+(117, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:16', 0, 0, NULL),
+(118, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:27', 0, 0, NULL),
+(119, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:29', 0, 0, NULL),
+(120, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:41', 0, 0, NULL),
+(121, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:48', 0, 0, NULL),
+(122, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:21:58', 0, 0, NULL),
+(123, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:06', 0, 0, NULL),
+(124, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:17', 0, 0, NULL),
+(125, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:23', 0, 0, NULL),
+(126, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:30', 0, 0, NULL),
+(127, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:42', 0, 0, NULL),
+(128, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:49', 0, 0, NULL),
+(129, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:22:51', 0, 0, NULL),
+(130, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:01', 0, 0, NULL),
+(131, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:11', 0, 0, NULL),
+(132, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:22', 0, 0, NULL),
+(133, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:28', 0, 0, NULL),
+(134, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:35', 0, 0, NULL),
+(135, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:47', 0, 0, NULL),
+(136, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:56', 0, 0, NULL),
+(137, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:23:57', 0, 0, NULL),
+(138, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:11', 0, 0, NULL),
+(139, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:16', 0, 0, NULL),
+(140, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:27', 0, 0, NULL),
+(141, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:33', 0, 0, NULL),
+(142, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:40', 0, 0, NULL),
+(143, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:49', 0, 0, NULL),
+(144, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:24:59', 0, 0, NULL),
+(145, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:25:03', 0, 0, NULL),
+(146, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:25:10', 0, 0, NULL),
+(147, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:25:20', 0, 0, NULL),
+(148, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:25:54', 0, 0, NULL),
+(149, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:02', 0, 0, NULL),
+(150, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:11', 0, 0, NULL),
+(151, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:18', 0, 0, NULL),
+(152, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:21', 0, 0, NULL),
+(153, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:32', 0, 0, NULL),
+(154, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:42', 0, 0, NULL),
+(155, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:49', 0, 0, NULL),
+(156, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:26:58', 0, 0, NULL),
+(157, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:06', 0, 0, NULL),
+(158, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:16', 0, 0, NULL),
+(159, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:26', 0, 0, NULL),
+(160, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:28', 0, 0, NULL),
+(161, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:35', 0, 0, NULL),
+(162, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:44', 0, 0, NULL),
+(163, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:27:54', 0, 0, NULL),
+(164, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:01', 0, 0, NULL),
+(165, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:04', 0, 0, NULL),
+(166, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:14', 0, 0, NULL),
+(167, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:25', 0, 0, NULL),
+(168, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:32', 0, 0, NULL),
+(169, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:35', 0, 0, NULL),
+(170, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:47', 0, 0, NULL),
+(171, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:28:56', 0, 0, NULL),
+(172, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:04', 0, 0, NULL),
+(173, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:11', 0, 0, NULL),
+(174, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:17', 0, 0, NULL),
+(175, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:28', 0, 0, NULL),
+(176, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:38', 0, 0, NULL),
+(177, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:45', 0, 0, NULL),
+(178, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:48', 0, 0, NULL),
+(179, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:29:59', 0, 0, NULL),
+(180, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:09', 0, 0, NULL),
+(181, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:19', 0, 0, NULL),
+(182, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:21', 0, 0, NULL),
+(183, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:31', 0, 0, NULL),
+(184, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:41', 0, 0, NULL),
+(185, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:47', 0, 0, NULL),
+(186, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:30:54', 0, 0, NULL),
+(187, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:05', 0, 0, NULL),
+(188, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:13', 0, 0, NULL),
+(189, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:19', 0, 0, NULL),
+(190, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:28', 0, 0, NULL),
+(191, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:34', 0, 0, NULL),
+(192, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:48', 0, 0, NULL),
+(193, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:56', 0, 0, NULL),
+(194, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:31:57', 0, 0, NULL),
+(195, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:32:06', 0, 0, NULL),
+(196, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:32:17', 0, 0, NULL),
+(197, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:33:28', 0, 0, NULL),
+(198, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:33:37', 0, 0, NULL),
+(199, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:33:48', 0, 0, NULL),
+(200, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:33:50', 0, 0, NULL),
+(201, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:34:07', 0, 0, NULL),
+(202, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:34:08', 0, 0, NULL),
+(203, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:34:19', 0, 0, NULL),
+(204, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-24 18:34:28', 0, 0, NULL),
+(205, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(206, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(207, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(208, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(209, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(210, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:53', 0, 0, NULL),
+(211, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:54', 0, 0, NULL),
+(212, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:16:54', 0, 0, NULL),
+(213, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:17:22', 0, 0, NULL),
+(214, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:17:23', 0, 0, NULL),
+(215, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:02', 0, 0, NULL),
+(216, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:09', 0, 0, NULL),
+(217, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:12', 0, 0, NULL),
+(218, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:13', 0, 0, NULL),
+(219, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:20', 0, 0, NULL),
+(220, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:22', 0, 0, NULL),
+(221, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:22', 0, 0, NULL),
+(222, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:30', 0, 0, NULL),
+(223, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:40', 0, 0, NULL),
+(224, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:42', 0, 0, NULL),
+(225, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:50', 0, 0, NULL),
+(226, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:18:59', 0, 0, NULL),
+(227, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:09', 0, 0, NULL),
+(228, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:11', 0, 0, NULL),
+(229, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:20', 0, 0, NULL),
+(230, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:30', 0, 0, NULL),
+(231, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:49', 0, 0, NULL),
+(232, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:50', 0, 0, NULL),
+(233, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:19:53', 0, 0, NULL),
+(234, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:03', 0, 0, NULL),
+(235, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:17', 0, 0, NULL),
+(236, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:19', 0, 0, NULL),
+(237, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:29', 0, 0, NULL),
+(238, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:35', 0, 0, NULL),
+(239, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:45', 0, 0, NULL),
+(240, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:53', 0, 0, NULL),
+(241, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:20:57', 0, 0, NULL),
+(242, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:06', 0, 0, NULL),
+(243, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:18', 0, 0, NULL),
+(244, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:25', 0, 0, NULL),
+(245, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:26', 0, 0, NULL),
+(246, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:38', 0, 0, NULL),
+(247, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:48', 0, 0, NULL),
+(248, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:21:56', 0, 0, NULL),
+(249, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:07', 0, 0, NULL),
+(250, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:09', 0, 0, NULL),
+(251, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:19', 0, 0, NULL),
+(252, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:39', 0, 0, NULL),
+(253, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:44', 0, 0, NULL),
+(254, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:46', 0, 0, NULL),
+(255, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:22:51', 0, 0, NULL),
+(256, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:03', 0, 0, NULL),
+(257, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:13', 0, 0, NULL),
+(258, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:15', 0, 0, NULL),
+(259, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:29', 0, 0, NULL),
+(260, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:36', 0, 0, NULL),
+(261, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:44', 0, 0, NULL),
+(262, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:54', 0, 0, NULL),
+(263, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:23:59', 0, 0, NULL),
+(264, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:14', 0, 0, NULL),
+(265, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:20', 0, 0, NULL),
+(266, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:30', 0, 0, NULL),
+(267, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:35', 0, 0, NULL),
+(268, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:46', 0, 0, NULL),
+(269, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:51', 0, 0, NULL),
+(270, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:24:59', 0, 0, NULL),
+(271, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:19', 0, 0, NULL),
+(272, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:28', 0, 0, NULL),
+(273, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:29', 0, 0, NULL),
+(274, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:36', 0, 0, NULL),
+(275, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:48', 0, 0, NULL),
+(276, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:56', 0, 0, NULL),
+(277, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:25:58', 0, 0, NULL),
+(278, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:08', 0, 0, NULL),
+(279, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:19', 0, 0, NULL),
+(280, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:30', 0, 0, NULL),
+(281, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:38', 0, 0, NULL),
+(282, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:45', 0, 0, NULL),
+(283, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:26:54', 0, 0, NULL),
+(284, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:03', 0, 0, NULL),
+(285, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:06', 0, 0, NULL),
+(286, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:16', 0, 0, NULL),
+(287, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:25', 0, 0, NULL),
+(288, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:35', 0, 0, NULL),
+(289, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:39', 0, 0, NULL),
+(290, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:45', 0, 0, NULL),
+(291, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:27:57', 0, 0, NULL),
+(292, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:28:06', 0, 0, NULL),
+(293, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:28:09', 0, 0, NULL),
+(294, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:28:17', 0, 0, NULL),
+(295, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:28:28', 0, 0, NULL),
+(296, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:29:51', 0, 0, NULL),
+(297, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:00', 0, 0, NULL),
+(298, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:10', 0, 0, NULL),
+(299, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:21', 0, 0, NULL),
+(300, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:31', 0, 0, NULL),
+(301, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:48', 0, 0, NULL),
+(302, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:30:58', 0, 0, NULL),
+(303, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:08', 0, 0, NULL),
+(304, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:19', 0, 0, NULL),
+(305, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:28', 0, 0, NULL),
+(306, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:38', 0, 0, NULL),
+(307, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:48', 0, 0, NULL),
+(308, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:31:58', 0, 0, NULL),
+(309, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:32:11', 0, 0, NULL),
+(310, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:32:18', 0, 0, NULL),
+(311, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:32:28', 0, 0, NULL),
+(312, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:32:38', 0, 0, NULL),
+(313, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:32:48', 0, 0, NULL),
+(314, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:02', 0, 0, NULL),
+(315, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:09', 0, 0, NULL),
+(316, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:18', 0, 0, NULL),
+(317, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:33', 0, 0, NULL),
+(318, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:42', 0, 0, NULL),
+(319, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:33:48', 0, 0, NULL),
+(320, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:00', 0, 0, NULL),
+(321, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:08', 0, 0, NULL),
+(322, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:18', 0, 0, NULL),
+(323, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:28', 0, 0, NULL),
+(324, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:40', 0, 0, NULL),
+(325, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:34:48', 0, 0, NULL),
+(326, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:35:27', 0, 0, NULL),
+(327, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:35:36', 0, 0, NULL),
+(328, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:35:52', 0, 0, NULL),
+(329, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:35:56', 0, 0, NULL),
+(330, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:07', 0, 0, NULL),
+(331, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:16', 0, 0, NULL),
+(332, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:47', 0, 0, NULL),
+(333, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:47', 0, 0, NULL),
+(334, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:47', 0, 0, NULL),
+(335, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:36:56', 0, 0, NULL),
+(336, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:06', 0, 0, NULL),
+(337, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:19', 0, 0, NULL),
+(338, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:26', 0, 0, NULL),
+(339, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:39', 0, 0, NULL),
+(340, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:46', 0, 0, NULL),
+(341, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:37:59', 0, 0, NULL),
+(342, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:07', 0, 0, NULL),
+(343, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:20', 0, 0, NULL),
+(344, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:27', 0, 0, NULL),
+(345, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:36', 0, 0, NULL),
+(346, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:46', 0, 0, NULL),
+(347, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:38:57', 0, 0, NULL),
+(348, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:07', 0, 0, NULL),
+(349, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:17', 0, 0, NULL),
+(350, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:27', 0, 0, NULL),
+(351, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:39', 0, 0, NULL),
+(352, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:47', 0, 0, NULL),
+(353, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:39:56', 0, 0, NULL),
+(354, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:40:06', 0, 0, NULL),
+(355, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:40:17', 0, 0, NULL),
+(356, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:40:27', 0, 0, NULL),
+(357, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:40:36', 0, 0, NULL),
+(358, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:40:47', 0, 0, NULL),
+(359, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:41:03', 0, 0, NULL),
+(360, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:41:09', 0, 0, NULL),
+(361, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:41:17', 0, 0, NULL),
+(362, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:41:26', 0, 0, NULL),
+(363, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:41:40', 0, 0, NULL),
+(364, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:19', 0, 0, NULL),
+(365, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:19', 0, 0, NULL),
+(366, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:20', 0, 0, NULL),
+(367, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:22', 0, 0, NULL),
+(368, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:27', 0, 0, NULL),
+(369, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:37', 0, 0, NULL),
+(370, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:42:56', 0, 0, NULL),
+(371, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:43:06', 0, 0, NULL),
+(372, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:43:14', 0, 0, NULL),
+(373, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:43:22', 0, 0, NULL),
+(374, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:43:28', 0, 0, NULL),
+(375, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:45:24', 0, 0, NULL),
+(376, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:45:24', 0, 0, NULL),
+(377, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:52:51', 0, 0, NULL),
+(378, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:52:51', 0, 0, NULL),
+(379, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:52:51', 0, 0, NULL),
+(380, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:52:55', 0, 0, NULL),
+(381, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:52:55', 0, 0, NULL),
+(382, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:53:06', 0, 0, NULL),
+(383, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:53:06', 0, 0, NULL),
+(384, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:53:23', 0, 0, NULL),
+(385, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:09', 0, 0, NULL),
+(386, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:13', 0, 0, NULL),
+(387, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:19', 0, 0, NULL),
+(388, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:19', 0, 0, NULL),
+(389, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:38', 0, 0, NULL),
+(390, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:38', 0, 0, NULL),
+(391, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:54:48', 0, 0, NULL),
+(392, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:04', 0, 0, NULL),
+(393, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:10', 0, 0, NULL),
+(394, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:10', 0, 0, NULL),
+(395, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:10', 0, 0, NULL),
+(396, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:11', 0, 0, NULL),
+(397, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 05:55:15', 0, 0, NULL),
+(398, 11, 10.30821700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:39:24', 0, 15, NULL),
+(399, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:39:35', 0, 15, NULL),
+(400, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:39:44', 0, 15, NULL),
+(401, 11, 10.30822200, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:39:57', 0, 15, NULL),
+(402, 11, 10.30822300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:04', 0, 15, NULL),
+(403, 11, 10.30822300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:14', 0, 15, NULL),
+(404, 11, 10.30822300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:24', 0, 15, NULL),
+(405, 11, 10.30822200, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:34', 0, 15, NULL),
+(406, 11, 10.30822100, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:44', 0, 15, NULL),
+(407, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:40:55', 0, 15, NULL),
+(408, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:08', 0, 15, NULL),
+(409, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:15', 0, 15, NULL),
+(410, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:25', 0, 15, NULL),
+(411, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:34', 0, 15, NULL),
+(412, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:44', 0, 15, NULL),
+(413, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:41:58', 0, 15, NULL),
+(414, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:04', 0, 15, NULL),
+(415, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:15', 0, 15, NULL),
+(416, 11, 10.30821900, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:25', 0, 15, NULL),
+(417, 11, 10.30821800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:38', 0, 15, NULL),
+(418, 11, 10.30821700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:44', 0, 15, NULL),
+(419, 11, 10.30821600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:42:55', 0, 15, NULL),
+(420, 11, 10.30821600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:05', 0, 15, NULL),
+(421, 11, 10.30821600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:14', 0, 15, NULL),
+(422, 11, 10.30821600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:24', 0, 15, NULL),
+(423, 11, 10.30821700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:34', 0, 14, NULL),
+(424, 11, 10.30821800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:46', 0, 14, NULL),
+(425, 11, 10.30821900, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:43:55', 0, 15, NULL),
+(426, 11, 10.30821800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:04', 0, 15, NULL),
+(427, 11, 10.30821700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:18', 0, 15, NULL),
+(428, 11, 10.30821600, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:24', 0, 15, NULL),
+(429, 11, 10.30821700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:34', 0, 15, NULL),
+(430, 11, 10.30821600, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:44', 0, 15, NULL),
+(431, 11, 10.30821700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:44:56', 0, 15, NULL),
+(432, 11, 10.30821800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:04', 0, 15, NULL),
+(433, 11, 10.30822000, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:15', 0, 15, NULL),
+(434, 11, 10.30822000, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:25', 0, 15, NULL),
+(435, 11, 10.30822500, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:35', 0, 15, NULL),
+(436, 11, 10.30822700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:49', 0, 15, NULL),
+(437, 11, 10.30822800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:45:54', 0, 15, NULL),
+(438, 11, 10.30822700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:05', 0, 15, NULL),
+(439, 11, 10.30822600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:15', 0, 15, NULL),
+(440, 11, 10.30822600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:24', 0, 15, NULL),
+(441, 11, 10.30822700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:34', 0, 15, NULL),
+(442, 11, 10.30822700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:44', 0, 15, NULL),
+(443, 11, 10.30822800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:46:54', 0, 15, NULL),
+(444, 11, 10.30822900, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:47:05', 0, 15, NULL),
+(445, 11, 10.30822400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:47:21', 0, 15, NULL),
+(446, 11, 10.30822700, 123.90625000, NULL, '0.2', NULL, 'esp32', '100', '2026-08-25 06:47:36', 0, 15, NULL),
+(447, 11, 10.30824900, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:47:41', 0, 15, NULL),
+(448, 11, 10.30825100, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:47:54', 0, 15, NULL),
+(449, 11, 10.30825100, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:47:54', 0, 15, NULL),
+(450, 11, 10.30825400, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:04', 0, 15, NULL),
+(451, 11, 10.30825500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:15', 0, 15, NULL),
+(452, 11, 10.30825400, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:25', 0, 14, NULL),
+(453, 11, 10.30826000, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:35', 0, 15, NULL),
+(454, 11, 10.30826500, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:44', 0, 14, NULL),
+(455, 11, 10.30826500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:48:56', 0, 15, NULL),
+(456, 11, 10.30827400, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:05', 0, 13, NULL),
+(457, 11, 10.30827500, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:14', 0, 14, NULL),
+(458, 11, 10.30827700, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:25', 0, 15, NULL),
+(459, 11, 10.30827400, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:34', 0, 14, NULL),
+(460, 11, 10.30827000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:45', 0, 15, NULL),
+(461, 11, 10.30826900, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:49:54', 0, 15, NULL),
+(462, 11, 10.30827000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:50:04', 0, 15, NULL),
+(463, 11, 10.30827100, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:50:14', 0, 15, NULL),
+(464, 11, 10.30827400, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:50:24', 0, 15, NULL),
+(465, 11, 10.30827900, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:50:34', 0, 15, NULL),
+(466, 11, 10.30828100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:04', 0, 13, NULL),
+(467, 11, 10.30828200, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:05', 0, 14, NULL),
+(468, 11, 10.30828400, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:05', 0, 12, NULL),
+(469, 11, 10.30828400, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:14', 0, 13, NULL),
+(470, 11, 10.30828400, 123.90630300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:29', 0, 14, NULL),
+(471, 11, 10.30828400, 123.90630300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:34', 0, 14, NULL),
+(472, 11, 10.30827900, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:51:45', 0, 14, NULL),
+(473, 11, 10.30827300, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:02', 0, 15, NULL),
+(474, 11, 10.30827500, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:05', 0, 16, NULL),
+(475, 11, 10.30827500, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:17', 0, 15, NULL),
+(476, 11, 10.30827400, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:25', 0, 16, NULL),
+(477, 11, 10.30827100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:35', 0, 16, NULL),
+(478, 11, 10.30826800, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:46', 0, 16, NULL),
+(479, 11, 10.30826400, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:52:54', 0, 16, NULL),
+(480, 11, 10.30826000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:53:04', 0, 15, NULL),
+(481, 11, 10.30825700, 123.90628100, NULL, '0.3', NULL, 'esp32', '100', '2026-08-25 06:53:20', 0, 16, NULL),
+(482, 11, 10.30825700, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:53:28', 0, 16, NULL),
+(483, 11, 10.30825600, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:53:35', 0, 16, NULL),
+(484, 11, 10.30825400, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:53:45', 0, 16, NULL),
+(485, 11, 10.30825300, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:53:55', 0, 16, NULL),
+(486, 11, 10.30825300, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:54:05', 0, 17, NULL),
+(487, 11, 10.30828300, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:54:15', 0, 17, NULL),
+(488, 11, 10.30828100, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:54:32', 0, 17, NULL),
+(489, 11, 10.30828000, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:54:51', 0, 17, NULL),
+(490, 11, 10.30827700, 123.90627300, NULL, '0.2', NULL, 'esp32', '100', '2026-08-25 06:54:52', 0, 17, NULL),
+(491, 11, 10.30824400, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:55:05', 0, 17, NULL),
+(492, 11, 10.30822400, 123.90627300, NULL, '0.7', NULL, 'esp32', '100', '2026-08-25 06:55:36', 0, 15, NULL),
+(493, 11, 10.30823200, 123.90627300, NULL, '1.0', NULL, 'esp32', '100', '2026-08-25 06:55:37', 0, 15, NULL),
+(494, 11, 10.30824800, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:55:37', 0, 16, NULL),
+(495, 11, 10.30823600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:55:38', 0, 16, NULL),
+(496, 11, 10.30823600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:55:58', 0, 15, NULL),
+(497, 11, 10.30823700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:06', 0, 15, NULL),
+(498, 11, 10.30824000, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:10', 0, 14, NULL),
+(499, 11, 10.30824800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:18', 0, 15, NULL),
+(500, 11, 10.30824900, 123.90626500, NULL, '0.2', NULL, 'esp32', '100', '2026-08-25 06:56:25', 0, 15, NULL),
+(501, 11, 10.30825400, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:38', 0, 15, NULL),
+(502, 11, 10.30827000, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:45', 0, 16, NULL),
+(503, 11, 10.30827100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:56:58', 0, 16, NULL),
+(504, 11, 10.30826900, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:17', 0, 16, NULL),
+(505, 11, 10.30826900, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:17', 0, 15, NULL),
+(506, 11, 10.30827300, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:26', 0, 16, NULL),
+(507, 11, 10.30826800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:36', 0, 15, NULL),
+(508, 11, 10.30827200, 123.90621200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:47', 0, 15, NULL),
+(509, 11, 10.30826500, 123.90621200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:57:55', 0, 16, NULL),
+(510, 11, 10.30826200, 123.90621200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:05', 0, 17, NULL),
+(511, 11, 10.30826000, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:15', 0, 17, NULL),
+(512, 11, 10.30825700, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:26', 0, 17, NULL),
+(513, 11, 10.30825700, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:35', 0, 17, NULL),
+(514, 11, 10.30825800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:46', 0, 16, NULL),
+(515, 11, 10.30825700, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:58:56', 0, 16, NULL),
+(516, 11, 10.30825500, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:12', 0, 16, NULL),
+(517, 11, 10.30825400, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:15', 0, 17, NULL),
+(518, 11, 10.30825400, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:26', 0, 17, NULL),
+(519, 11, 10.30825300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:35', 0, 16, NULL),
+(520, 11, 10.30825300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:45', 0, 16, NULL),
+(521, 11, 10.30825300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 06:59:55', 0, 16, NULL),
+(522, 11, 10.30825400, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:06', 0, 15, NULL),
+(523, 11, 10.30825500, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:15', 0, 15, NULL),
+(524, 11, 10.30825500, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:26', 0, 15, NULL),
+(525, 11, 10.30825600, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:35', 0, 15, NULL),
+(526, 11, 10.30825700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:46', 0, 16, NULL),
+(527, 11, 10.30828100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:00:57', 0, 17, NULL),
+(528, 11, 10.30828100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:05', 0, 17, NULL),
+(529, 11, 10.30828200, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:15', 0, 16, NULL),
+(530, 11, 10.30828300, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:25', 0, 16, NULL),
+(531, 11, 10.30828300, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:35', 0, 17, NULL),
+(532, 11, 10.30828100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:46', 0, 17, NULL),
+(533, 11, 10.30827800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:01:55', 0, 17, NULL),
+(534, 11, 10.30827100, 123.90626500, NULL, '0.4', NULL, 'esp32', '100', '2026-08-25 07:02:07', 0, 17, NULL),
+(535, 11, 10.30827100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:02:15', 0, 17, NULL),
+(536, 11, 10.30827100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:02:26', 0, 17, NULL),
+(537, 11, 10.30827300, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:02:35', 0, 17, NULL),
+(538, 11, 10.30827300, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:02:49', 0, 18, NULL),
+(539, 11, 10.30827200, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:02:55', 0, 18, NULL),
+(540, 11, 10.30827100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:03:05', 0, 18, NULL),
+(541, 11, 10.30827100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:03:16', 0, 17, NULL),
+(542, 11, 10.30827200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:03:26', 0, 17, NULL),
+(543, 11, 10.30827200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:03:37', 0, 17, NULL),
+(544, 11, 10.30827100, 123.90627300, NULL, '0.1', NULL, 'esp32', '100', '2026-08-25 07:03:45', 0, 17, NULL),
+(545, 11, 10.30827200, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:03:57', 0, 17, NULL),
+(546, 11, 10.30827500, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:06', 0, 17, NULL),
+(547, 11, 10.30827200, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:15', 0, 17, NULL),
+(548, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:25', 0, 17, NULL),
+(549, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:40', 0, 17, NULL),
+(550, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:46', 0, 17, NULL),
+(551, 11, 10.30827100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:04:56', 0, 17, NULL),
+(552, 11, 10.30827100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:05', 0, 17, NULL),
+(553, 11, 10.30827100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:16', 0, 17, NULL),
+(554, 11, 10.30827100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:25', 0, 18, NULL),
+(555, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:35', 0, 18, NULL),
+(556, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:47', 0, 18, NULL),
+(557, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:05:56', 0, 18, NULL),
+(558, 11, 10.30827000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:06:06', 0, 18, NULL),
+(559, 11, 10.30826300, 123.90628100, NULL, '0.5', NULL, 'esp32', '100', '2026-08-25 07:06:16', 0, 18, NULL),
+(560, 11, 10.30825800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:06:33', 0, 18, NULL),
+(561, 11, 10.30825800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:06:35', 0, 18, NULL),
+(562, 11, 10.30825700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:06:45', 0, 18, NULL),
+(563, 11, 10.30825700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:06:56', 0, 18, NULL),
+(564, 11, 10.30825500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:06', 0, 18, NULL),
+(565, 11, 10.30825400, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:21', 0, 18, NULL),
+(566, 11, 10.30825400, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:26', 0, 18, NULL);
+INSERT INTO `gps_logs` (`id`, `rider_id`, `latitude`, `longitude`, `altitude`, `speed`, `course`, `device_type`, `battery`, `created_at`, `vibration`, `satellites`, `hdop`) VALUES
+(567, 11, 10.30825200, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:36', 0, 17, NULL),
+(568, 11, 10.30824500, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:53', 0, 17, NULL),
+(569, 11, 10.30824300, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:07:57', 0, 17, NULL),
+(570, 11, 10.30824100, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:05', 0, 17, NULL),
+(571, 11, 10.30824000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:15', 0, 17, NULL),
+(572, 11, 10.30823800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:25', 0, 17, NULL),
+(573, 11, 10.30823200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:37', 0, 17, NULL),
+(574, 11, 10.30823200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:45', 0, 17, NULL),
+(575, 11, 10.30823200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:08:57', 0, 18, NULL),
+(576, 11, 10.30823200, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:09:05', 0, 18, NULL),
+(577, 11, 10.30822700, 123.90627300, NULL, '0.7', NULL, 'esp32', '100', '2026-08-25 07:09:16', 0, 18, NULL),
+(578, 11, 10.30821000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:09:25', 0, 18, NULL),
+(579, 11, 10.30821000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:09:36', 0, 18, NULL),
+(580, 11, 10.30820900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:09:45', 0, 18, NULL),
+(581, 11, 10.30820800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:09:55', 0, 18, NULL),
+(582, 11, 10.30820700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:10:06', 0, 18, NULL),
+(583, 11, 10.30820400, 123.90624200, NULL, '0.2', NULL, 'esp32', '100', '2026-08-25 07:10:17', 0, 18, NULL),
+(584, 11, 10.30820300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:10:26', 0, 17, NULL),
+(585, 11, 10.30820200, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:10:36', 0, 18, NULL),
+(586, 11, 10.30820100, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:10:46', 0, 18, NULL),
+(587, 11, 10.30819800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:10:56', 0, 18, NULL),
+(588, 11, 10.30820000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:06', 0, 18, NULL),
+(589, 11, 10.30819900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:15', 0, 18, NULL),
+(590, 11, 10.30819900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:27', 0, 18, NULL),
+(591, 11, 10.30819900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:36', 0, 18, NULL),
+(592, 11, 10.30819900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:52', 0, 18, NULL),
+(593, 11, 10.30820000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:11:56', 0, 18, NULL),
+(594, 11, 10.30820100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:05', 0, 18, NULL),
+(595, 11, 10.30820300, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:15', 0, 18, NULL),
+(596, 11, 10.30820400, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:25', 0, 17, NULL),
+(597, 11, 10.30820500, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:36', 0, 17, NULL),
+(598, 11, 10.30820600, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:45', 0, 18, NULL),
+(599, 11, 10.30820600, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:12:57', 0, 18, NULL),
+(600, 11, 10.30820700, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:06', 0, 18, NULL),
+(601, 11, 10.30820800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:17', 0, 16, NULL),
+(602, 11, 10.18486700, 123.54381100, NULL, '25', NULL, 'esp32', '85', '2026-08-25 07:13:21', 0, 8, NULL),
+(603, 11, 10.30820800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:31', 0, 16, NULL),
+(604, 11, 10.30820800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:35', 0, 15, NULL),
+(605, 11, 10.30820900, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:48', 0, 16, NULL),
+(606, 11, 10.30820900, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:13:57', 0, 17, NULL),
+(607, 11, 10.30820900, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:06', 0, 17, NULL),
+(608, 11, 10.30821000, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:15', 0, 17, NULL),
+(609, 11, 10.30821000, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:26', 0, 17, NULL),
+(610, 11, 10.30821000, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:36', 0, 18, NULL),
+(611, 11, 10.30821000, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:47', 0, 18, NULL),
+(612, 11, 10.30821000, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:14:55', 0, 17, NULL),
+(613, 11, 10.30821400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:05', 0, 17, NULL),
+(614, 11, 10.30821400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:16', 0, 17, NULL),
+(615, 11, 10.30821300, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:25', 0, 17, NULL),
+(616, 11, 10.30821300, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:37', 0, 16, NULL),
+(617, 11, 10.30820800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:45', 0, 17, NULL),
+(618, 11, 10.30820800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:15:56', 0, 17, NULL),
+(619, 11, 10.30820800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:05', 0, 17, NULL),
+(620, 11, 10.30820800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:18', 0, 17, NULL),
+(621, 11, 10.30820800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:25', 0, 17, NULL),
+(622, 11, 10.30820800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:37', 0, 17, NULL),
+(623, 11, 10.30820700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:46', 0, 17, NULL),
+(624, 11, 10.30820600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:16:56', 0, 17, NULL),
+(625, 11, 10.30821300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:17:06', 0, 18, NULL),
+(626, 11, 10.30821600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:17:15', 0, 18, NULL),
+(627, 11, 10.30821800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:17:25', 0, 18, NULL),
+(628, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:17:36', 0, 18, NULL),
+(629, 11, 10.30821800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:17:46', 0, 18, NULL),
+(630, 11, 10.30821900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:18:01', 0, 18, NULL),
+(631, 11, 10.30822100, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:18:05', 0, 18, NULL),
+(632, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:18:22', 0, 18, NULL),
+(633, 11, 10.30822000, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:18:25', 0, 18, NULL),
+(634, 11, 10.30825400, 123.90628100, NULL, '0.3', NULL, 'esp32', '100', '2026-08-25 07:22:10', 0, 13, NULL),
+(635, 11, 10.30825000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:22:21', 0, 13, NULL),
+(636, 11, 10.30824900, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:22:30', 0, 15, NULL),
+(637, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 07:29:53', 0, 0, NULL),
+(638, 11, 10.30825700, 123.90624200, NULL, '0.4', NULL, 'esp32', '100', '2026-08-25 07:30:02', 0, 9, NULL),
+(639, 11, 10.30821900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:30:13', 0, 14, NULL),
+(640, 11, 10.30819900, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:30:23', 0, 13, NULL),
+(641, 11, 10.30818700, 123.90621200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:30:32', 0, 14, NULL),
+(642, 11, 10.30819300, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:30:42', 0, 16, NULL),
+(643, 11, 10.30819800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:30:53', 0, 16, NULL),
+(644, 11, 10.30820000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:05', 0, 17, NULL),
+(645, 11, 10.30820300, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:12', 0, 17, NULL),
+(646, 11, 10.30821100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:24', 0, 17, NULL),
+(647, 11, 10.30821800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:33', 0, 17, NULL),
+(648, 11, 10.30822500, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:46', 0, 17, NULL),
+(649, 11, 10.30822800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:31:52', 0, 17, NULL),
+(650, 11, 10.30822900, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:32:04', 0, 17, NULL),
+(651, 11, 10.30822800, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:32:12', 0, 17, NULL),
+(652, 11, 10.30824300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:33:37', 0, 17, NULL),
+(653, 11, 10.30824400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:33:48', 0, 17, NULL),
+(654, 11, 10.30821900, 123.90631100, NULL, '1.4', NULL, 'esp32', '100', '2026-08-25 07:36:07', 0, 8, NULL),
+(655, 11, 10.30820400, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:36:14', 0, 14, NULL),
+(656, 11, 10.30820000, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:36:24', 0, 14, NULL),
+(657, 11, 10.30819500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:36:35', 0, 16, NULL),
+(658, 11, 10.30818900, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:36:45', 0, 16, NULL),
+(659, 11, 10.30818500, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:36:56', 0, 16, NULL),
+(660, 11, 10.30818100, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:05', 0, 16, NULL),
+(661, 11, 10.30817900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:15', 0, 16, NULL),
+(662, 11, 10.30817900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:26', 0, 15, NULL),
+(663, 11, 10.30817900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:35', 0, 15, NULL),
+(664, 11, 10.30818100, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:45', 0, 17, NULL),
+(665, 11, 10.30818200, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:37:59', 0, 17, NULL),
+(666, 11, 10.30818300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:05', 0, 16, NULL),
+(667, 11, 10.30818400, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:15', 0, 16, NULL),
+(668, 11, 10.30818500, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:26', 0, 16, NULL),
+(669, 11, 10.30818500, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:35', 0, 16, NULL),
+(670, 11, 10.30818600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:47', 0, 16, NULL),
+(671, 11, 10.30818600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:38:55', 0, 16, NULL),
+(672, 11, 10.30818600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:06', 0, 16, NULL),
+(673, 11, 10.30818600, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:15', 0, 16, NULL),
+(674, 11, 10.30818700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:25', 0, 16, NULL),
+(675, 11, 10.30818700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:39', 0, 16, NULL),
+(676, 11, 10.30818800, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:45', 0, 16, NULL),
+(677, 11, 10.30818900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:39:55', 0, 16, NULL),
+(678, 11, 10.30818900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:05', 0, 16, NULL),
+(679, 11, 10.30818900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:15', 0, 16, NULL),
+(680, 11, 10.30819000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:25', 0, 16, NULL),
+(681, 11, 10.30819100, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:37', 0, 17, NULL),
+(682, 11, 10.30819200, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:47', 0, 17, NULL),
+(683, 11, 10.30819300, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:40:55', 0, 17, NULL),
+(684, 11, 10.30819400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:07', 0, 17, NULL),
+(685, 11, 10.30819500, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:15', 0, 17, NULL),
+(686, 11, 10.30819600, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:26', 0, 17, NULL),
+(687, 11, 10.30819600, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:35', 0, 17, NULL),
+(688, 11, 10.30819700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:45', 0, 17, NULL),
+(689, 11, 10.30819700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:41:55', 0, 16, NULL),
+(690, 11, 10.30819800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:42:09', 0, 17, NULL),
+(691, 11, 10.30819800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:42:15', 0, 17, NULL),
+(692, 11, 10.30819800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:42:25', 0, 17, NULL),
+(693, 11, 10.30819700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:42:35', 0, 16, NULL),
+(694, 11, 10.30817800, 123.90623500, NULL, '1.8', NULL, 'esp32', '100', '2026-08-25 07:42:50', 0, 17, NULL),
+(695, 11, 10.30817900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:42:57', 0, 17, NULL),
+(696, 11, 10.30818000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:43:05', 0, 16, NULL),
+(697, 11, 10.30818100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:43:21', 0, 17, NULL),
+(698, 11, 10.30818000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:43:25', 0, 17, NULL),
+(699, 11, 10.30817800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:43:36', 0, 17, NULL),
+(700, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 07:49:16', 0, 0, NULL),
+(701, 11, 10.30836100, 123.90641000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:49:47', 0, 10, NULL),
+(702, 11, 10.30830900, 123.90637200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:50:17', 0, 12, NULL),
+(703, 11, 10.30826900, 123.90636400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:50:47', 0, 14, NULL),
+(704, 11, 10.30827700, 123.90636400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:51:19', 0, 14, NULL),
+(705, 11, 10.30826100, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:51:48', 0, 15, NULL),
+(706, 11, 10.30826200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:52:19', 0, 14, NULL),
+(707, 11, 10.30827200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:52:49', 0, 13, NULL),
+(708, 11, 10.30828200, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:53:20', 0, 14, NULL),
+(709, 11, 10.30828400, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:53:51', 0, 14, NULL),
+(710, 11, 10.30828000, 123.90630300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:54:24', 0, 14, NULL),
+(711, 11, 10.30826500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:54:52', 0, 13, NULL),
+(712, 11, 10.30836100, 123.90641000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 07:55:08', 0, 10, NULL),
+(713, 11, 10.30826800, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:55:22', 0, 15, NULL),
+(714, 11, 10.30828200, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:55:57', 0, 16, NULL),
+(715, 11, 10.30826700, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:56:25', 0, 16, NULL),
+(716, 11, 10.30826100, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:56:55', 0, 16, NULL),
+(717, 11, 10.30825100, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:57:24', 0, 14, NULL),
+(718, 11, 10.30825400, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:57:56', 0, 14, NULL),
+(719, 11, 10.30824900, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:58:26', 0, 14, NULL),
+(720, 11, 10.30823100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:58:56', 0, 15, NULL),
+(721, 11, 10.30822100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:59:26', 0, 14, NULL),
+(722, 11, 10.30822200, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 07:59:58', 0, 14, NULL),
+(723, 11, 10.30822000, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:00:28', 0, 15, NULL),
+(724, 11, 10.30821500, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:01:00', 0, 15, NULL),
+(725, 11, 10.30823100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:01:29', 0, 15, NULL),
+(726, 11, 10.30824000, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:01:59', 0, 15, NULL),
+(727, 11, 10.30823500, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:02:36', 0, 14, NULL),
+(728, 11, 10.30823800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:03:08', 0, 15, NULL),
+(729, 11, 10.30824000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:03:31', 0, 14, NULL),
+(730, 11, 10.30824000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:04:02', 0, 14, NULL),
+(731, 11, 10.30824400, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:04:32', 0, 15, NULL),
+(732, 11, 10.30824400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:05:03', 0, 15, NULL),
+(733, 11, 10.30824400, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:05:34', 0, 15, NULL),
+(734, 11, 10.30823800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:06:04', 0, 15, NULL),
+(735, 11, 10.30824700, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:06:34', 0, 15, NULL),
+(736, 11, 10.30824900, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:07:05', 0, 15, NULL),
+(737, 11, 10.30825600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:07:35', 0, 14, NULL),
+(738, 11, 10.30825800, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:08:59', 0, 15, NULL),
+(739, 11, 10.30825800, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:09:11', 0, 15, NULL),
+(740, 11, 10.30825900, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:09:44', 0, 15, NULL),
+(741, 11, 10.30825300, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:10:28', 0, 15, NULL),
+(742, 11, 10.30827200, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:11:13', 0, 15, NULL),
+(743, 11, 10.30827300, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:11:57', 0, 15, NULL),
+(744, 11, 10.30827600, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:12:42', 0, 15, NULL),
+(745, 11, 10.30826700, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:13:26', 0, 15, NULL),
+(746, 11, 10.30827100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:14:11', 0, 15, NULL),
+(747, 11, 10.30826700, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:14:55', 0, 14, NULL),
+(748, 11, 10.30825400, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:15:41', 0, 16, NULL),
+(749, 11, 10.30825000, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:16:25', 0, 15, NULL),
+(750, 11, 10.30825000, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:17:13', 0, 15, NULL),
+(751, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 08:20:55', 0, 0, NULL),
+(752, 11, 10.30821400, 123.90611300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:21:39', 0, 10, NULL),
+(753, 11, 10.30821600, 123.90615100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:22:24', 0, 11, NULL),
+(754, 11, 10.30817400, 123.90620400, NULL, '0.8', NULL, 'esp32', '100', '2026-08-25 08:23:08', 0, 13, NULL),
+(755, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 08:39:04', 0, 0, NULL),
+(756, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 08:39:47', 0, 0, NULL),
+(757, 11, 10.30814200, 123.90605900, NULL, '0.8', NULL, 'esp32', '100', '2026-08-25 08:40:31', 0, 6, NULL),
+(758, 11, 10.30818700, 123.90620400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:41:15', 0, 8, NULL),
+(759, 11, 10.30818700, 123.90619700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:42:00', 0, 9, NULL),
+(760, 11, 10.30821500, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:42:44', 0, 12, NULL),
+(761, 11, 10.30821600, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:43:29', 0, 11, NULL),
+(762, 11, 10.30824400, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:44:14', 0, 11, NULL),
+(763, 11, 10.30827200, 123.90624200, NULL, '0.4', NULL, 'esp32', '100', '2026-08-25 08:44:58', 0, 11, NULL),
+(764, 11, 10.30827300, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:45:43', 0, 9, NULL),
+(765, 11, 10.30827000, 123.90620400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:46:28', 0, 9, NULL),
+(766, 11, 10.30826700, 123.90620400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:47:12', 0, 10, NULL),
+(767, 11, 10.30823100, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:47:57', 0, 11, NULL),
+(768, 11, 10.30822200, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:48:42', 0, 11, NULL),
+(769, 11, 10.30822100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:49:26', 0, 12, NULL),
+(770, 11, 10.30822400, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:50:11', 0, 12, NULL),
+(771, 11, 10.30828600, 123.90631900, NULL, '0.3', NULL, 'esp32', '100', '2026-08-25 08:50:55', 0, 12, NULL),
+(772, 11, 10.30825200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:51:39', 0, 14, NULL),
+(773, 11, 10.30822400, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:52:25', 0, 13, NULL),
+(774, 11, 10.30822600, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:53:09', 0, 14, NULL),
+(775, 11, 10.30822800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:53:54', 0, 13, NULL),
+(776, 11, 10.30824100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:54:38', 0, 15, NULL),
+(777, 11, 10.30821900, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:55:23', 0, 14, NULL),
+(778, 11, 10.30820000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:56:08', 0, 14, NULL),
+(779, 11, 10.30819700, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:56:53', 0, 14, NULL),
+(780, 11, 10.30817300, 123.90625000, NULL, '0.8', NULL, 'esp32', '100', '2026-08-25 08:57:37', 0, 12, NULL),
+(781, 11, 10.30819900, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:58:27', 0, 13, NULL),
+(782, 11, 10.30820400, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:59:07', 0, 15, NULL),
+(783, 11, 10.30820800, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 08:59:53', 0, 15, NULL),
+(784, 11, 10.30823900, 123.90634900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:01:23', 0, 14, NULL),
+(785, 11, 10.30823800, 123.90632600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:02:02', 0, 14, NULL),
+(786, 11, 10.30824600, 123.90629600, NULL, '0.3', NULL, 'esp32', '100', '2026-08-25 09:02:40', 0, 13, NULL),
+(787, 11, 10.30819400, 123.90611300, NULL, '3.4', NULL, 'esp32', '100', '2026-08-25 09:04:07', 0, 14, NULL),
+(788, 11, 10.30814800, 123.90605900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:04:44', 0, 10, NULL),
+(789, 11, 10.30814900, 123.90605900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:05:23', 0, 14, NULL),
+(790, 11, 10.30821600, 123.90615800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:06:50', 0, 17, NULL),
+(791, 11, 10.30821700, 123.90615800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:07:27', 0, 16, NULL),
+(792, 11, 10.30822300, 123.90618900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:08:07', 0, 17, NULL),
+(793, 11, 10.30822400, 123.90620400, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:09:32', 0, 18, NULL),
+(794, 11, 10.30822800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:10:10', 0, 17, NULL),
+(795, 11, 10.30822800, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:10:48', 0, 18, NULL),
+(796, 11, 10.30823200, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:12:31', 0, 17, NULL),
+(797, 11, 10.30823600, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:13:17', 0, 18, NULL),
+(798, 11, 10.30823700, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:13:43', 0, 18, NULL),
+(799, 11, 10.30823800, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:14:09', 0, 18, NULL),
+(800, 11, 10.30824000, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:14:35', 0, 18, NULL),
+(801, 11, 10.30824000, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:15:01', 0, 18, NULL),
+(802, 11, 10.30824100, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:15:26', 0, 18, NULL),
+(803, 11, 10.30824100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:15:54', 0, 18, NULL),
+(804, 11, 10.30824200, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:16:25', 0, 17, NULL),
+(805, 11, 10.30824100, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:16:46', 0, 17, NULL),
+(806, 11, 10.30824100, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:17:12', 0, 17, NULL),
+(807, 11, 10.30824000, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:17:38', 0, 16, NULL),
+(808, 11, 10.30822800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:18:05', 0, 16, NULL),
+(809, 11, 10.30822600, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:18:30', 0, 16, NULL),
+(810, 11, 10.30822400, 123.90625000, NULL, '0.1', NULL, 'esp32', '100', '2026-08-25 09:18:57', 0, 16, NULL),
+(811, 11, 10.30822900, 123.90623500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:19:23', 0, 15, NULL),
+(812, 11, 10.30823400, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:19:48', 0, 15, NULL),
+(813, 11, 10.30822600, 123.90624200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:20:14', 0, 15, NULL),
+(814, 11, 10.30822000, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:20:40', 0, 15, NULL),
+(815, 11, 10.30821900, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:21:07', 0, 14, NULL),
+(816, 11, 10.30821800, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:21:34', 0, 14, NULL),
+(817, 11, 10.30821600, 123.90625000, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:22:02', 0, 15, NULL),
+(818, 11, 10.30822000, 123.90625800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:22:25', 0, 15, NULL),
+(819, 11, 10.30821700, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:22:52', 0, 15, NULL),
+(820, 11, 10.30821800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:23:17', 0, 15, NULL),
+(821, 11, 10.30821800, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:23:45', 0, 14, NULL),
+(822, 11, 10.30821600, 123.90626500, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:24:10', 0, 15, NULL),
+(823, 11, 10.30821500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:24:36', 0, 15, NULL),
+(824, 11, 10.30821500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:25:02', 0, 15, NULL),
+(825, 11, 10.30821200, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:25:28', 0, 15, NULL),
+(826, 11, 10.30820800, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:25:55', 0, 15, NULL),
+(827, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 09:41:54', 0, 0, NULL),
+(828, 11, 10.30817500, 123.90627300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:43:07', 0, 13, NULL),
+(829, 11, 10.30818500, 123.90628100, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:43:44', 0, 13, NULL),
+(830, 11, 10.30820000, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:44:22', 0, 13, NULL),
+(831, 11, 10.30821400, 123.90630300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:45:23', 0, 16, NULL),
+(832, 11, 10.30822100, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:46:01', 0, 15, NULL),
+(833, 11, 10.30822900, 123.90629600, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:46:40', 0, 15, NULL),
+(834, 11, 10.30823500, 123.90630300, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:48:05', 0, 15, NULL),
+(835, 11, 10.30814700, 123.90639500, NULL, '1.9', NULL, 'esp32', '100', '2026-08-25 09:50:51', 0, 9, NULL),
+(836, 11, 10.30815600, 123.90637200, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:51:28', 0, 16, NULL),
+(837, 11, 10.30816000, 123.90634900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:52:06', 0, 16, NULL),
+(838, 11, 10.30808200, 123.90616600, NULL, '1.6', NULL, 'esp32', '100', '2026-08-25 09:54:40', 0, 7, NULL),
+(839, 11, 10.30819000, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:55:18', 0, 13, NULL),
+(840, 11, 10.30820100, 123.90622700, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:55:57', 0, 15, NULL),
+(841, 11, 10.30820800, 123.90621900, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 09:57:22', 0, 15, NULL),
+(842, 11, 10.30802300, 123.90636400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:14:04', 0, 9, NULL),
+(843, 11, 10.30803100, 123.90638700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:14:20', 0, 8, NULL),
+(844, 11, 10.30802200, 123.90641800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:14:43', 0, 8, NULL),
+(845, 11, 10.30790600, 123.90662400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:15:02', 0, 7, NULL),
+(846, 11, 10.30803500, 123.90641800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:15:23', 0, 7, NULL),
+(847, 11, 10.30804400, 123.90640300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:15:46', 0, 7, NULL),
+(848, 11, 10.30804300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:16:05', 0, 8, NULL),
+(849, 11, 10.30808800, 123.90611300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:16:27', 0, 7, NULL),
+(850, 11, 10.30837200, 123.90621200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:16:58', 0, 7, NULL),
+(851, 11, 10.30828800, 123.90640300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:17:09', 0, 6, NULL),
+(852, 11, 10.30822900, 123.90645600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:17:29', 0, 6, NULL),
+(853, 11, 10.30830000, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:17:58', 0, 6, NULL),
+(854, 11, 10.30849500, 123.90619700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:18:12', 0, 5, NULL),
+(855, 11, 10.30847800, 123.90631900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:18:39', 0, 5, NULL),
+(856, 11, 10.30846000, 123.90637200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:18:54', 0, 7, NULL),
+(857, 11, 10.30849200, 123.90632600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:19:15', 0, 6, NULL),
+(858, 11, 10.30848700, 123.90631900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:19:39', 0, 7, NULL),
+(859, 11, 10.30852900, 123.90637200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:19:57', 0, 7, NULL),
+(860, 11, 10.30852000, 123.90634200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:20:18', 0, 7, NULL),
+(861, 11, 10.30850000, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:20:40', 0, 7, NULL),
+(862, 11, 10.30851000, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:21:04', 0, 7, NULL),
+(863, 11, 10.30849800, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:21:21', 0, 6, NULL),
+(864, 11, 10.30854800, 123.90641000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:21:42', 0, 6, NULL),
+(865, 11, 10.30857500, 123.90636400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:22:08', 0, 6, NULL),
+(866, 11, 10.30865300, 123.90636400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:22:25', 0, 6, NULL),
+(867, 11, 10.30865900, 123.90633400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:22:46', 0, 7, NULL),
+(868, 11, 10.30864000, 123.90632600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:23:06', 0, 7, NULL),
+(869, 11, 10.30861200, 123.90635700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:23:28', 0, 7, NULL),
+(870, 11, 10.30856400, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:23:48', 0, 6, NULL),
+(871, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:37:27', 0, 0, NULL),
+(872, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:37:48', 0, 0, NULL),
+(873, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:38:09', 0, 0, NULL),
+(874, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:38:30', 0, 0, NULL),
+(875, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:38:50', 0, 0, NULL),
+(876, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:39:12', 0, 0, NULL),
+(877, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:39:32', 0, 0, NULL),
+(878, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:39:55', 0, 0, NULL),
+(879, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:40:15', 0, 0, NULL),
+(880, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:40:36', 0, 0, NULL),
+(881, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:40:57', 0, 0, NULL),
+(882, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:41:18', 0, 0, NULL),
+(883, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:41:38', 0, 0, NULL),
+(884, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:42:01', 0, 0, NULL),
+(885, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:42:29', 0, 0, NULL),
+(886, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:43:42', 0, 0, NULL),
+(887, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:44:03', 0, 0, NULL),
+(888, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:44:25', 0, 0, NULL),
+(889, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:44:44', 0, 0, NULL),
+(890, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:45:06', 0, 0, NULL),
+(891, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:45:27', 0, 0, NULL),
+(892, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:45:47', 0, 0, NULL),
+(893, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:46:08', 0, 0, NULL),
+(894, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:46:29', 0, 0, NULL),
+(895, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:46:51', 0, 0, NULL),
+(896, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:47:12', 0, 0, NULL),
+(897, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:47:32', 0, 0, NULL),
+(898, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:49:03', 0, 0, NULL),
+(899, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:49:24', 0, 0, NULL),
+(900, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:49:44', 0, 0, NULL),
+(901, 11, 10.30814700, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:50:05', 0, 8, NULL),
+(902, 11, 10.30814700, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:50:25', 0, 12, NULL),
+(903, 11, 10.30816400, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:50:46', 0, 13, NULL),
+(904, 11, 10.30817300, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:51:08', 0, 14, NULL),
+(905, 11, 10.30818300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:51:28', 0, 13, NULL),
+(906, 11, 10.30818700, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:51:49', 0, 14, NULL),
+(907, 11, 10.30818500, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 12:52:11', 0, 14, NULL),
+(908, 11, 10.30825800, 123.90628800, NULL, '0.0', NULL, 'esp32', '100', '2026-08-25 12:55:07', 0, 15, NULL),
+(909, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:02:56', 0, 0, NULL),
+(910, 11, 10.30815000, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:05:57', 0, 11, NULL),
+(911, 11, 10.30807500, 123.90631100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:05:57', 0, 9, NULL),
+(912, 11, 10.30801500, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:05:57', 0, 7, NULL),
+(913, 11, 10.30817300, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:06:05', 0, 11, NULL),
+(914, 11, 10.30815900, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:06:26', 0, 11, NULL),
+(915, 11, 10.30809500, 123.90618900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:06:57', 0, 11, NULL),
+(916, 11, 10.30814800, 123.90617400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:07:11', 0, 11, NULL),
+(917, 11, 10.30816000, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:07:29', 0, 11, NULL),
+(918, 11, 10.30819900, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:07:55', 0, 10, NULL),
+(919, 11, 10.30820100, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:08:16', 0, 10, NULL),
+(920, 11, 10.30821400, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:08:41', 0, 10, NULL),
+(921, 11, 10.30828600, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:09:23', 0, 11, NULL),
+(922, 11, 10.30825100, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:12:27', 0, 11, NULL),
+(923, 11, 10.30826500, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:12:29', 0, 10, NULL),
+(924, 11, 10.30825700, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:12:34', 0, 11, NULL),
+(925, 11, 10.30824800, 123.90617400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:12:41', 0, 11, NULL),
+(926, 11, 10.30824300, 123.90618900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:12:57', 0, 10, NULL),
+(927, 11, 10.30824500, 123.90619700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:13:46', 0, 10, NULL),
+(928, 11, 10.30824300, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:15:02', 0, 9, NULL),
+(929, 11, 10.30824500, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:15:18', 0, 9, NULL),
+(930, 11, 10.30811700, 123.90613600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:15:31', 0, 9, NULL),
+(931, 11, 10.30812100, 123.90614300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:16:15', 0, 9, NULL),
+(932, 11, 10.30815900, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:16:35', 0, 9, NULL),
+(933, 11, 10.30811300, 123.90618900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:16:57', 0, 11, NULL),
+(934, 11, 10.30811300, 123.90618900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:17:33', 0, 9, NULL),
+(935, 11, 10.30810600, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:19:03', 0, 10, NULL),
+(936, 11, 10.30814000, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:19:03', 0, 8, NULL),
+(937, 11, 10.30816200, 123.90631100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:19:39', 0, 10, NULL),
+(938, 11, 10.30813700, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:20:03', 0, 12, NULL),
+(939, 11, 10.30815000, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:20:26', 0, 11, NULL),
+(940, 11, 10.30814600, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:20:45', 0, 11, NULL),
+(941, 11, 10.30817600, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:21:07', 0, 9, NULL),
+(942, 11, 10.30817800, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:21:32', 0, 9, NULL),
+(943, 11, 10.30818900, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:21:50', 0, 10, NULL),
+(944, 11, 10.30816500, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:22:40', 0, 9, NULL),
+(945, 11, 10.30816200, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:24:15', 0, 9, NULL),
+(946, 11, 10.30812900, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:25:19', 0, 9, NULL),
+(947, 11, 10.30808700, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:25:20', 0, 8, NULL),
+(948, 11, 10.30810100, 123.90611300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:26:05', 0, 11, NULL),
+(949, 11, 10.30822800, 123.90610500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:26:34', 0, 9, NULL),
+(950, 11, 10.30821800, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:26:45', 0, 7, NULL),
+(951, 11, 10.30825800, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:27:07', 0, 7, NULL),
+(952, 11, 10.30825600, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:27:24', 0, 7, NULL),
+(953, 11, 10.30825800, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:27:46', 0, 6, NULL),
+(954, 11, 10.30824500, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:28:21', 0, 8, NULL),
+(955, 11, 10.30818500, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:28:36', 0, 7, NULL),
+(956, 11, 10.30818700, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:28:49', 0, 8, NULL),
+(957, 11, 10.30820400, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:29:24', 0, 8, NULL),
+(958, 11, 10.30819800, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:29:47', 0, 9, NULL),
+(959, 11, 10.30822100, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:30:36', 0, 8, NULL),
+(960, 11, 10.30824400, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:30:53', 0, 10, NULL),
+(961, 11, 10.30823400, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:31:19', 0, 11, NULL),
+(962, 11, 10.30823400, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:31:49', 0, 11, NULL),
+(963, 11, 10.30823000, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:31:56', 0, 11, NULL),
+(964, 11, 10.30823000, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:32:18', 0, 11, NULL),
+(965, 11, 10.30820700, 123.90620400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:33:06', 0, 11, NULL),
+(966, 11, 10.30820800, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:33:21', 0, 10, NULL),
+(967, 11, 10.30820800, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:33:41', 0, 10, NULL),
+(968, 11, 10.30820500, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:34:10', 0, 10, NULL),
+(969, 11, 10.30820300, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:34:24', 0, 12, NULL),
+(970, 11, 10.30819300, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:34:44', 0, 12, NULL),
+(971, 11, 10.30818800, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:35:15', 0, 11, NULL),
+(972, 11, 10.30819400, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:35:27', 0, 10, NULL),
+(973, 11, 10.30819400, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:35:47', 0, 10, NULL),
+(974, 11, 10.30818300, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:36:24', 0, 9, NULL),
+(975, 11, 10.30816300, 123.90620400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:36:29', 0, 10, NULL),
+(976, 11, 10.30817400, 123.90619700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:36:50', 0, 9, NULL),
+(977, 11, 10.30811700, 123.90616600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:37:26', 0, 8, NULL),
+(978, 11, 10.30815400, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:37:32', 0, 9, NULL),
+(979, 11, 10.30815700, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:38:09', 0, 10, NULL),
+(980, 11, 10.30816400, 123.90618100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:39:33', 0, 10, NULL),
+(981, 11, 10.30822600, 123.90619700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:40:39', 0, 9, NULL),
+(982, 11, 10.30823800, 123.90620400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:41:24', 0, 11, NULL),
+(983, 11, 10.30826800, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:41:55', 0, 9, NULL),
+(984, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:47:31', 0, 0, NULL),
+(985, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:48:33', 0, 0, NULL),
+(986, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:48:34', 0, 0, NULL),
+(987, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:48:47', 0, 0, NULL),
+(988, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:49:08', 0, 0, NULL),
+(989, 11, 10.30814400, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:49:30', 0, 8, NULL),
+(990, 11, 10.30816700, 123.90637200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 13:50:53', 0, 8, NULL),
+(991, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:05:39', 0, 0, NULL),
+(992, 11, 10.30826700, 123.90633400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:05:58', 0, 4, NULL),
+(993, 11, 10.30827100, 123.90631900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:06:18', 0, 6, NULL),
+(994, 11, 10.30828800, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:06:39', 0, 7, NULL),
+(995, 11, 10.30830000, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:07:00', 0, 7, NULL),
+(996, 11, 10.30829500, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:07:25', 0, 8, NULL),
+(997, 11, 10.30829300, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:07:43', 0, 8, NULL),
+(998, 11, 10.30828200, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:08:03', 0, 10, NULL),
+(999, 11, 10.30826600, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:08:25', 0, 10, NULL),
+(1000, 11, 10.30825700, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:08:47', 0, 10, NULL),
+(1001, 11, 10.30825500, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:09:14', 0, 11, NULL),
+(1002, 11, 10.30825100, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:09:29', 0, 11, NULL),
+(1003, 11, 10.30826400, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:09:54', 0, 11, NULL),
+(1004, 11, 10.30826500, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:10:11', 0, 11, NULL),
+(1005, 11, 10.30826300, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:10:32', 0, 12, NULL),
+(1006, 11, 10.30826300, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:10:52', 0, 12, NULL),
+(1007, 11, 10.30830300, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:11:13', 0, 12, NULL),
+(1008, 11, 10.30830100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:11:34', 0, 12, NULL),
+(1009, 11, 10.30829000, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:11:55', 0, 11, NULL),
+(1010, 11, 10.30827700, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:12:18', 0, 12, NULL),
+(1011, 11, 10.30826200, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:12:37', 0, 12, NULL),
+(1012, 11, 10.30826300, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:12:58', 0, 12, NULL),
+(1013, 11, 10.30824200, 123.90621200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:13:19', 0, 11, NULL),
+(1014, 11, 10.30824800, 123.90620400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:13:40', 0, 12, NULL),
+(1015, 11, 10.30825400, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:14:02', 0, 12, NULL),
+(1016, 11, 10.30824700, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:14:26', 0, 10, NULL),
+(1017, 11, 10.30822500, 123.90621200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:14:44', 0, 11, NULL),
+(1018, 11, 10.30829600, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:15:04', 0, 11, NULL),
+(1019, 11, 10.30829100, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:15:26', 0, 11, NULL),
+(1020, 11, 10.30829400, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:15:46', 0, 12, NULL),
+(1021, 11, 10.30828600, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:16:08', 0, 12, NULL),
+(1022, 11, 10.30827700, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:16:28', 0, 12, NULL),
+(1023, 11, 10.30827600, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:16:50', 0, 12, NULL),
+(1024, 11, 10.30827200, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:17:10', 0, 11, NULL),
+(1025, 11, 10.30827200, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:17:31', 0, 12, NULL),
+(1026, 11, 10.30827300, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:17:54', 0, 12, NULL),
+(1027, 11, 10.30827000, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:18:14', 0, 12, NULL),
+(1028, 11, 10.30827000, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:18:35', 0, 12, NULL),
+(1029, 11, 10.30827000, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:18:55', 0, 13, NULL),
+(1030, 11, 10.30827000, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:19:17', 0, 13, NULL),
+(1031, 11, 10.30828100, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:19:38', 0, 13, NULL),
+(1032, 11, 10.30827900, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:19:58', 0, 13, NULL),
+(1033, 11, 10.30827900, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:20:20', 0, 13, NULL),
+(1034, 11, 10.30830500, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:22:45', 0, 11, NULL),
+(1035, 11, 10.30831300, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:23:06', 0, 13, NULL),
+(1036, 11, 10.30831100, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:23:28', 0, 13, NULL),
+(1037, 11, 10.30830000, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:23:49', 0, 12, NULL),
+(1038, 11, 10.30829900, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:24:10', 0, 12, NULL),
+(1039, 11, 10.30831600, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:24:31', 0, 12, NULL),
+(1040, 11, 10.30831800, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:24:52', 0, 11, NULL),
+(1041, 11, 10.30831900, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:25:13', 0, 11, NULL),
+(1042, 11, 10.30831300, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:25:34', 0, 12, NULL);
+INSERT INTO `gps_logs` (`id`, `rider_id`, `latitude`, `longitude`, `altitude`, `speed`, `course`, `device_type`, `battery`, `created_at`, `vibration`, `satellites`, `hdop`) VALUES
+(1043, 11, 10.30830600, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:25:55', 0, 11, NULL),
+(1044, 11, 10.30828800, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:26:16', 0, 12, NULL),
+(1045, 11, 10.30828600, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:26:37', 0, 12, NULL),
+(1046, 11, 10.30830800, 123.90631100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:26:58', 0, 11, NULL),
+(1047, 11, 10.30830800, 123.90631100, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:27:19', 0, 11, NULL),
+(1048, 11, 10.30830000, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:27:40', 0, 12, NULL),
+(1049, 11, 10.30832600, 123.90632600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:28:01', 0, 11, NULL),
+(1050, 11, 10.30832000, 123.90632600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:28:22', 0, 13, NULL),
+(1051, 11, 10.30832900, 123.90634900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:28:43', 0, 13, NULL),
+(1052, 11, 10.30831900, 123.90634900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:29:07', 0, 13, NULL),
+(1053, 11, 10.30832900, 123.90635700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:29:25', 0, 13, NULL),
+(1054, 11, 10.30832800, 123.90634900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:29:46', 0, 13, NULL),
+(1055, 11, 10.30832700, 123.90633400, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:30:07', 0, 13, NULL),
+(1056, 11, 10.30832700, 123.90632600, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:30:28', 0, 11, NULL),
+(1057, 11, 10.30830100, 123.90630300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:30:49', 0, 13, NULL),
+(1058, 11, 10.30828400, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:31:10', 0, 13, NULL),
+(1059, 11, 10.30826700, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:31:31', 0, 12, NULL),
+(1060, 11, 10.30827500, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:31:52', 0, 12, NULL),
+(1061, 11, 10.30827200, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:32:13', 0, 13, NULL),
+(1062, 11, 10.30827200, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:32:34', 0, 12, NULL),
+(1063, 11, 10.30827100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:32:55', 0, 12, NULL),
+(1064, 11, 10.30827000, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:33:16', 0, 11, NULL),
+(1065, 11, 10.30826500, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:33:37', 0, 12, NULL),
+(1066, 11, 10.30825900, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:33:59', 0, 13, NULL),
+(1067, 11, 10.30825700, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:34:19', 0, 13, NULL),
+(1068, 11, 10.30826500, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:34:43', 0, 13, NULL),
+(1069, 11, 10.30826400, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:35:02', 0, 13, NULL),
+(1070, 11, 10.30826300, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:35:23', 0, 10, NULL),
+(1071, 11, 10.30826800, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:35:44', 0, 11, NULL),
+(1072, 11, 10.30826900, 123.90622700, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:36:05', 0, 11, NULL),
+(1073, 11, 10.30826900, 123.90621200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:36:26', 0, 11, NULL),
+(1074, 11, 10.30825900, 123.90621200, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:36:47', 0, 12, NULL),
+(1075, 11, 10.30826500, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:37:08', 0, 12, NULL),
+(1076, 11, 10.30828300, 123.90621900, NULL, '0', NULL, 'esp32', '100', '2026-08-25 15:37:29', 0, 12, NULL),
+(1077, 11, NULL, NULL, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:21:46', 0, 0, NULL),
+(1078, 11, 10.30823200, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:22:01', 0, 13, NULL),
+(1079, 11, 10.30827000, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:22:27', 0, 16, NULL),
+(1080, 11, 10.30826400, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:23:20', 0, 15, NULL),
+(1081, 11, 10.30827000, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:23:53', 0, 14, NULL),
+(1082, 11, 10.30824500, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:24:19', 0, 17, NULL),
+(1083, 11, 10.30824600, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:24:50', 0, 18, NULL),
+(1084, 11, 10.30824500, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:25:13', 0, 18, NULL),
+(1085, 11, 10.30823200, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:25:28', 0, 19, NULL),
+(1086, 11, 10.30824500, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:26:05', 0, 19, NULL),
+(1087, 11, 10.30824300, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:26:32', 0, 19, NULL),
+(1088, 11, 10.30825300, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:26:53', 0, 19, NULL),
+(1089, 11, 10.30825800, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:27:14', 0, 18, NULL),
+(1090, 11, 10.30825500, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:27:34', 0, 19, NULL),
+(1091, 11, 10.30826800, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:27:54', 0, 18, NULL),
+(1092, 11, 10.30826900, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:28:18', 0, 15, NULL),
+(1093, 11, 10.30827300, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:28:37', 0, 17, NULL),
+(1094, 11, 10.30825800, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:29:01', 0, 19, NULL),
+(1095, 11, 10.30825800, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:29:18', 0, 19, NULL),
+(1096, 11, 10.30825900, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:29:42', 0, 19, NULL),
+(1097, 11, 10.30825500, 123.90628800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:30:01', 0, 19, NULL),
+(1098, 11, 10.30825800, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:30:23', 0, 19, NULL),
+(1099, 11, 10.30825700, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:30:43', 0, 19, NULL),
+(1100, 11, 10.30825000, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:31:04', 0, 17, NULL),
+(1101, 11, 10.30825200, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:31:25', 0, 17, NULL),
+(1102, 11, 10.30825700, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:31:48', 0, 16, NULL),
+(1103, 11, 10.30826300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:32:07', 0, 17, NULL),
+(1104, 11, 10.30828300, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:32:28', 0, 17, NULL),
+(1105, 11, 10.30828400, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:32:49', 0, 15, NULL),
+(1106, 11, 10.30828600, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:33:10', 0, 18, NULL),
+(1107, 11, 10.30829100, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:33:48', 0, 18, NULL),
+(1108, 11, 10.30829100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:33:54', 0, 18, NULL),
+(1109, 11, 10.30829000, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:34:13', 0, 19, NULL),
+(1110, 11, 10.30828800, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:34:49', 0, 19, NULL),
+(1111, 11, 10.30827500, 123.90623500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:34:58', 0, 18, NULL),
+(1112, 11, 10.30828000, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:35:33', 0, 19, NULL),
+(1113, 11, 10.30828800, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:35:42', 0, 17, NULL),
+(1114, 11, 10.30828100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:36:10', 0, 16, NULL),
+(1115, 11, 10.30828200, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:37:14', 0, 16, NULL),
+(1116, 11, 10.30828700, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:37:18', 0, 17, NULL),
+(1117, 11, 10.30828800, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:38:04', 0, 16, NULL),
+(1118, 11, 10.30828700, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:38:04', 0, 17, NULL),
+(1119, 11, 10.30828600, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:38:23', 0, 18, NULL),
+(1120, 11, 10.30828700, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:38:48', 0, 18, NULL),
+(1121, 11, 10.30828100, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:39:05', 0, 18, NULL),
+(1122, 11, 10.30828000, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:39:26', 0, 18, NULL),
+(1123, 11, 10.30828500, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:39:50', 0, 17, NULL),
+(1124, 11, 10.30828500, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:40:12', 0, 17, NULL),
+(1125, 11, 10.30828800, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:40:31', 0, 17, NULL),
+(1126, 11, 10.30828800, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:40:54', 0, 17, NULL),
+(1127, 11, 10.30829200, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:41:13', 0, 16, NULL),
+(1128, 11, 10.30829300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:41:36', 0, 15, NULL),
+(1129, 11, 10.30829800, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:41:53', 0, 14, NULL),
+(1130, 11, 10.30830900, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:42:14', 0, 15, NULL),
+(1131, 11, 10.30830700, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:42:35', 0, 16, NULL),
+(1132, 11, 10.30830500, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:43:00', 0, 17, NULL),
+(1133, 11, 10.30829000, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:43:18', 0, 17, NULL),
+(1134, 11, 10.30827300, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:43:38', 0, 16, NULL),
+(1135, 11, 10.30827300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:44:00', 0, 16, NULL),
+(1136, 11, 10.30828000, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:44:21', 0, 17, NULL),
+(1137, 11, 10.30829500, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:44:42', 0, 16, NULL),
+(1138, 11, 10.30829000, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:45:02', 0, 16, NULL),
+(1139, 11, 10.30829000, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:45:25', 0, 16, NULL),
+(1140, 11, 10.30828100, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:45:44', 0, 17, NULL),
+(1141, 11, 10.30827000, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:46:12', 0, 17, NULL),
+(1142, 11, 10.30826600, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:46:27', 0, 17, NULL),
+(1143, 11, 10.30828500, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:46:50', 0, 17, NULL),
+(1144, 11, 10.30827100, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:47:09', 0, 16, NULL),
+(1145, 11, 10.30826700, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:47:30', 0, 16, NULL),
+(1146, 11, 10.30825500, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:47:51', 0, 17, NULL),
+(1147, 11, 10.30825200, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:48:14', 0, 18, NULL),
+(1148, 11, 10.30825300, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:48:35', 0, 17, NULL),
+(1149, 11, 10.30824600, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:48:54', 0, 17, NULL),
+(1150, 11, 10.30819700, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:50:41', 0, 10, NULL),
+(1151, 11, 10.30820100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:50:56', 0, 10, NULL),
+(1152, 11, 10.30821200, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:51:24', 0, 11, NULL),
+(1153, 11, 10.30821400, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:51:38', 0, 12, NULL),
+(1154, 11, 10.30823700, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:51:59', 0, 14, NULL),
+(1155, 11, 10.30823800, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:52:20', 0, 14, NULL),
+(1156, 11, 10.30824100, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:53:49', 1, 16, NULL),
+(1157, 11, 10.30827500, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:55:40', 0, 14, NULL),
+(1158, 11, 10.30827100, 123.90629600, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:56:04', 0, 14, NULL),
+(1159, 11, 10.30827100, 123.90628100, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:56:19', 0, 14, NULL),
+(1160, 11, 10.30826300, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:56:45', 0, 15, NULL),
+(1161, 11, 10.30826500, 123.90627300, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:57:02', 0, 16, NULL),
+(1162, 11, 10.30826600, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:57:27', 0, 16, NULL),
+(1163, 11, 10.30826800, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:57:54', 0, 15, NULL),
+(1164, 11, 10.30826800, 123.90626500, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:58:04', 0, 17, NULL),
+(1165, 11, 10.30826300, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:58:25', 0, 16, NULL),
+(1166, 11, 10.30826400, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:58:48', 0, 16, NULL),
+(1167, 11, 10.30825800, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 06:59:28', 0, 16, NULL),
+(1168, 11, 10.30828400, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:00:55', 0, 16, NULL),
+(1169, 11, 10.30827000, 123.90625800, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:01:13', 0, 16, NULL),
+(1170, 11, 10.30825500, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:05:02', 0, 16, NULL),
+(1171, 11, 10.30825600, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:05:25', 0, 17, NULL),
+(1172, 11, 10.30825500, 123.90625000, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:05:46', 0, 17, NULL),
+(1173, 11, 10.30825500, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:06:06', 0, 17, NULL),
+(1174, 11, 10.30825500, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:06:26', 0, 17, NULL),
+(1175, 11, 10.30825700, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:06:47', 0, 17, NULL),
+(1176, 11, 10.30825600, 123.90624200, NULL, '0', NULL, 'esp32', '100', '2026-09-11 07:07:08', 0, 17, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gps_signal_logs`
+--
+
+CREATE TABLE `gps_signal_logs` (
+  `id` int(11) NOT NULL,
+  `device_id` varchar(32) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `satellites_visible` int(11) DEFAULT 0,
+  `satellites_used` int(11) DEFAULT 0,
+  `hdop` float DEFAULT NULL,
+  `signal_quality` enum('excellent','good','fair','poor','none') DEFAULT 'none',
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `map_alerts`
+--
+
+CREATE TABLE `map_alerts` (
+  `id` int(11) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `rider_name` varchar(255) NOT NULL,
+  `ebike_id` varchar(100) DEFAULT NULL,
+  `latitude` decimal(10,6) DEFAULT NULL,
+  `longitude` decimal(10,6) DEFAULT NULL,
+  `is_online` tinyint(1) DEFAULT 0,
+  `alert_type` varchar(20) DEFAULT 'geofence',
+  `vibration` tinyint(1) DEFAULT 0,
+  `status` varchar(20) DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `map_alerts`
+--
+
+INSERT INTO `map_alerts` (`id`, `rider_id`, `rider_name`, `ebike_id`, `latitude`, `longitude`, `is_online`, `alert_type`, `vibration`, `status`, `created_at`, `updated_at`) VALUES
+(1, 11, 'jkklj', '002', 10.308283, 123.906219, 0, 'geofence', 0, 'dismissed', '2026-08-25 17:16:55', '2026-08-25 17:17:15'),
+(2, 11, 'jkklj', '002', 10.308283, 123.906219, 0, 'geofence', 0, 'dismissed', '2026-08-25 17:17:18', '2026-09-04 16:18:01'),
+(3, 11, 'jkklj', '002', 10.308256, 123.906242, 0, 'geofence', 0, 'active', '2026-09-04 16:18:04', '2026-09-11 07:07:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `user_type` enum('admin','rider') NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `rental_logs`
+--
+
+CREATE TABLE `rental_logs` (
+  `id` int(11) NOT NULL,
+  `rental_session_id` int(11) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `rental_sessions`
+--
+
+CREATE TABLE `rental_sessions` (
+  `id` int(11) NOT NULL,
+  `rider_id` int(11) NOT NULL,
+  `ebike_id` varchar(10) NOT NULL,
+  `start_time` datetime NOT NULL DEFAULT current_timestamp(),
+  `end_time` datetime DEFAULT NULL,
+  `status` enum('active','returned','expired','stolen') DEFAULT 'active',
+  `stolen_declared_at` datetime DEFAULT NULL,
+  `grace_period_start` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_settings`
+--
+
+CREATE TABLE `system_settings` (
+  `setting_key` varchar(64) NOT NULL,
+  `setting_value` text NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `system_settings`
+--
+
+INSERT INTO `system_settings` (`setting_key`, `setting_value`, `updated_at`) VALUES
+('last_rider_reset_at', '2026-06-11 23:45:39', '2026-06-11 15:45:39'),
+('perimeter_points', '[{\"lat\":11.300485244765712,\"lng\":123.72964739799501},{\"lat\":11.300664098923686,\"lng\":123.7298056483269},{\"lat\":11.300632536433334,\"lng\":123.72997462749481},{\"lat\":11.300558890608976,\"lng\":123.73029381036761},{\"lat\":11.300482614556655,\"lng\":123.73051375150683},{\"lat\":11.300348473863728,\"lng\":123.73073905706407},{\"lat\":11.300243265433194,\"lng\":123.73092681169511},{\"lat\":11.300061780799798,\"lng\":123.7312111258507},{\"lat\":11.299967093119383,\"lng\":123.73138546943666},{\"lat\":11.299867144978352,\"lng\":123.73161345720293},{\"lat\":11.299730373781545,\"lng\":123.73190581798555},{\"lat\":11.299646206858782,\"lng\":123.73210966587068},{\"lat\":11.299535737735157,\"lng\":123.73233765363695},{\"lat\":11.299412117474919,\"lng\":123.73263269662858},{\"lat\":11.299348992215101,\"lng\":123.73276680707933},{\"lat\":11.299285866941378,\"lng\":123.73289823532106},{\"lat\":11.299220111433142,\"lng\":123.73306185007098},{\"lat\":11.2991359443606,\"lng\":123.73321741819383},{\"lat\":11.299080709705827,\"lng\":123.73335957527162},{\"lat\":11.299046516818969,\"lng\":123.7334641814232},{\"lat\":11.299001803037696,\"lng\":123.73363316059114},{\"lat\":11.298917635901073,\"lng\":123.73375654220582},{\"lat\":11.29884398963627,\"lng\":123.73388260602952},{\"lat\":11.29869932727533,\"lng\":123.73420447111131},{\"lat\":11.298502060301919,\"lng\":123.73462021350862},{\"lat\":11.298302162963772,\"lng\":123.73496353626253},{\"lat\":11.298133828255159,\"lng\":123.73529076576234},{\"lat\":11.297944451589858,\"lng\":123.73568773269655},{\"lat\":11.297744553863033,\"lng\":123.73597204685213},{\"lat\":11.297581479298495,\"lng\":123.736310005188},{\"lat\":11.297439446537688,\"lng\":123.73660504817963},{\"lat\":11.297628823536463,\"lng\":123.73684108257295},{\"lat\":11.297486790799102,\"lng\":123.7371736764908},{\"lat\":11.297155380805084,\"lng\":123.73696446418764},{\"lat\":11.296750323625671,\"lng\":123.73770475387575},{\"lat\":11.296655634851884,\"lng\":123.73788177967073},{\"lat\":11.296513601632604,\"lng\":123.73816072940828},{\"lat\":11.296392610316248,\"lng\":123.73839139938356},{\"lat\":11.29624005597508,\"lng\":123.73864889144899},{\"lat\":11.296213753494253,\"lng\":123.7388849258423},{\"lat\":11.296787147029258,\"lng\":123.73905658721925},{\"lat\":11.29673454216554,\"lng\":123.73919069767},{\"lat\":11.295924426046074,\"lng\":123.73946428298952},{\"lat\":11.295729787416732,\"lng\":123.73981833457948},{\"lat\":11.295540409164119,\"lng\":123.74022603034975},{\"lat\":11.292620811949494,\"lng\":123.74373435974123},{\"lat\":11.290600748920443,\"lng\":123.7452793121338},{\"lat\":11.288875267156328,\"lng\":123.7467384338379},{\"lat\":11.286623708280333,\"lng\":123.74836921691896},{\"lat\":11.284351088891047,\"lng\":123.74907732009889},{\"lat\":11.278059206206537,\"lng\":123.75107288360596},{\"lat\":11.274355558658277,\"lng\":123.75225305557252},{\"lat\":11.272377454618763,\"lng\":123.75328302383424},{\"lat\":11.268505381781166,\"lng\":123.75605106353761},{\"lat\":11.268358073632724,\"lng\":123.75847578048707},{\"lat\":11.243903875747069,\"lng\":123.76064300537111},{\"lat\":11.240873262562987,\"lng\":123.69742870330812},{\"lat\":11.296513601632604,\"lng\":123.72502326965333}]', '2026-06-19 07:30:47'),
+('zone_area_sqm', '10000', '2026-06-11 07:45:11'),
+('zone_center_lat', '11.29565', '2026-06-11 09:22:46'),
+('zone_center_lng', '123.73087', '2026-06-11 09:22:46'),
+('zone_radius_km', '5.85', '2026-06-11 09:23:49');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `fullname` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `ebike_id` varchar(10) DEFAULT NULL,
+  `face_data` longtext DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `role` enum('admin','rider') DEFAULT 'rider',
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `is_online` tinyint(1) NOT NULL DEFAULT 0,
+  `last_online_at` datetime DEFAULT NULL,
+  `online_source` varchar(20) DEFAULT NULL COMMENT 'login, esp32, manual',
+  `rental_started` datetime DEFAULT NULL,
+  `is_stolen` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `fullname`, `email`, `phone`, `address`, `ebike_id`, `face_data`, `password`, `role`, `status`, `created_at`, `is_online`, `last_online_at`, `online_source`, `rental_started`, `is_stolen`) VALUES
+(1, 'Walker', 'Walker@gmail.com', '032842384328', NULL, NULL, NULL, '$2y$10$VhRG2gyiqaOCRfwLZ5soNudka241/wuSnbOoI5S5AYGmEjwOEHiCO', 'admin', 'approved', '2026-06-09 10:56:07', 0, NULL, NULL, NULL, 0);
+INSERT INTO `users` (`id`, `fullname`, `email`, `phone`, `address`, `ebike_id`, `face_data`, `password`, `role`, `status`, `created_at`, `is_online`, `last_online_at`, `online_source`, `rental_started`, `is_stolen`) VALUES
+(11, 'jkklj', 'ebike002@rider.local', '5465434634', 'nbjhjh', '002', '{\"image\":\"data:image/jpeg;base64,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\",\"descriptor\":[-0.1443193554878235,0.09258421510457993,0.08516891300678253,-0.06505785882472992,-0.037590108811855316,-0.09566469490528107,-0.007199994288384914,-0.09231022745370865,0.15084035694599152,-0.07337826490402222,0.31481170654296875,-0.05117703974246979,-0.1629621535539627,-0.0986054465174675,-0.021761536598205566,0.15689457952976227,-0.14725634455680847,-0.12633216381072998,-0.09880361706018448,-0.008366857655346394,0.07883542776107788,-0.03686990588903427,-0.007421033922582865,0.05649542808532715,-0.12159179151058197,-0.3243159353733063,-0.06634800136089325,-0.045521143823862076,0.014369998127222061,-0.00946362316608429,-0.023578345775604248,0.032355982810258865,-0.254304438829422,-0.10994821041822433,0.027659865096211433,0.0764739140868187,0.028312236070632935,0.01986418478190899,0.1546105146408081,0.012136252596974373,-0.25036439299583435,-0.016564996913075447,0.06626242399215698,0.257460355758667,0.23844589293003082,0.06558943539857864,0.006883667781949043,-0.10400740057229996,0.08600594848394394,-0.19000957906246185,-0.0045205457136034966,0.10260620713233948,0.15260781347751617,0.03751193732023239,-0.002608639420941472,-0.1723237782716751,0.015599379315972328,0.1301025152206421,-0.1728620082139969,0.04467831552028656,0.0274219810962677,-0.17008864879608154,-0.04493460804224014,-0.087434783577919,0.28459808230400085,0.05047563835978508,-0.16459381580352783,-0.18153272569179535,0.13849245011806488,-0.10934440046548843,-0.04771027714014053,0.09117333590984344,-0.1398411989212036,-0.18615412712097168,-0.43549156188964844,0.06122010573744774,0.3964109420776367,0.08760975301265717,-0.23760010302066803,0.06714260578155518,-0.08730199187994003,0.048928890377283096,0.06538543850183487,0.16217510402202606,-0.046050943434238434,0.0726827085018158,-0.11095478385686874,-0.059600938111543655,0.18125517666339874,-0.03751518949866295,-0.05004606395959854,0.2032395601272583,-0.08796543627977371,0.06369306892156601,-0.0025244676508009434,0.030320746824145317,-0.12449600547552109,0.004370714072138071,-0.14536094665527344,-0.054054342210292816,0.011685913428664207,-0.025670858100056648,0.030592694878578186,0.12448463588953018,-0.1873367577791214,0.07504051923751831,-0.04304731264710426,0.03394508734345436,-0.012914875522255898,0.00030622558551840484,-0.050507158041000366,-0.10954032838344574,0.09477988630533218,-0.24176132678985596,0.19764433801174164,0.21057505905628204,0.060027364641427994,0.14540421962738037,0.17277894914150238,0.05425816401839256,-0.0045739151537418365,0.07631830126047134,-0.13960860669612885,0.01594311185181141,0.07424001395702362,-0.07557228952646255,0.1484583467245102,0.004139309749007225]}', '$2y$10$0ClgEg.9f3V2NGGReLZhue6GtTT/LgKvOcIAmzV4lLT0q8MH0gWCG', 'rider', 'approved', '2026-06-16 09:55:04', 0, '2026-09-11 15:07:08', NULL, NULL, 0);
+INSERT INTO `users` (`id`, `fullname`, `email`, `phone`, `address`, `ebike_id`, `face_data`, `password`, `role`, `status`, `created_at`, `is_online`, `last_online_at`, `online_source`, `rental_started`, `is_stolen`) VALUES
+(12, 'hjkhkhjkh', 'ebike003@rider.local', '09638223912', 'fftyufty', '003', '{\"image\":\"data:image/jpeg;base64,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\",\"descriptor\":[-0.1818929761648178,0.06396988779306412,0.10901772230863571,-0.07796315848827362,-0.0589575320482254,0.0069136908277869225,0.016113653779029846,-0.06804489344358444,0.1831813007593155,-0.09400618076324463,0.32672861218452454,-0.07565931975841522,-0.21764805912971497,-0.13205626606941223,-0.021889295428991318,0.1970653384923935,-0.20637595653533936,-0.11052495241165161,-0.0620073564350605,0.03827352449297905,0.044445451349020004,-0.01186778862029314,-0.02807246707379818,0.044771790504455566,-0.11083798110485077,-0.45752131938934326,-0.06410916149616241,-0.07044732570648193,-0.02093586139380932,-0.14069020748138428,-0.06898902356624603,0.09986036270856857,-0.21855458617210388,-0.031044436618685722,-0.05640644580125809,0.13992376625537872,-0.05888552591204643,-0.05721258372068405,0.14127841591835022,0.031112097203731537,-0.2284112423658371,-0.015021216124296188,0.03516523912549019,0.25053873658180237,0.17084328830242157,0.019150106236338615,-0.013080376200377941,-0.03069700486958027,0.03617095947265625,-0.2546563148498535,-0.008241665549576283,0.1428888589143753,0.14177943766117096,0.043343041092157364,0.017520666122436523,-0.17214816808700562,-0.025965917855501175,0.05579088255763054,-0.1631338894367218,0.005584650207310915,-0.02184058539569378,-0.13190540671348572,-0.01529707107692957,-0.03043123334646225,0.20224644243717194,0.11664330214262009,-0.11898905038833618,-0.05939542129635811,0.13040152192115784,-0.08024458587169647,0.018485620617866516,0.02684152126312256,-0.1320752501487732,-0.2678370773792267,-0.2755998969078064,0.04101331904530525,0.3947798013687134,0.08483076095581055,-0.25218525528907776,0.0063859508372843266,-0.12141871452331543,-0.04331541061401367,0.0993383452296257,0.12941503524780273,0.003095192601904273,0.021055879071354866,-0.1411120593547821,0.026783419772982597,0.16174091398715973,-0.05828464403748512,0.026664478704333305,0.22111114859580994,-0.019756266847252846,0.029205728322267532,-0.001384416944347322,-0.013398894108831882,-0.04725253954529762,0.041452642530202866,-0.11287526786327362,-0.026459259912371635,-0.008588661439716816,-0.07408498227596283,-0.0551222525537014,0.05668194219470024,-0.19010308384895325,0.10753302276134491,0.11193893104791641,-0.026461385190486908,0.039008863270282745,-0.01880265586078167,-0.07014022767543793,-0.0973052978515625,0.11617294698953629,-0.26557275652885437,0.17509794235229492,0.23306429386138916,-0.019435135647654533,0.22618244588375092,0.08980882167816162,0.08677414804697037,-0.004196669906377792,-0.05032631754875183,-0.13224540650844574,0.007263436913490295,0.07642453163862228,0.0060885134153068066,0.03496335819363594,-0.009211910888552666],\"version\":\"1.0\",\"timestamp\":\"2026-06-18T04:22:42.927Z\"}', '$2y$10$auxu.ZkIvvWR4dI82u7gV.iRPO5Q4HaXq1/ax8fp1s95gaausZsk6', 'rider', 'approved', '2026-06-18 04:22:44', 0, '2026-06-18 12:30:59', NULL, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `view_active_riders`
+-- (See below for the actual view)
+--
+CREATE TABLE `view_active_riders` (
+`rider_id` int(11)
+,`fullname` varchar(100)
+,`ebike_id` varchar(10)
+,`is_online` tinyint(1)
+,`last_online_at` datetime
+,`online_source` varchar(20)
+,`device_id` varchar(32)
+,`device_type` varchar(50)
+,`device_active` tinyint(1)
+,`device_last_seen` datetime
+,`latitude` decimal(10,8)
+,`longitude` decimal(11,8)
+,`speed` varchar(20)
+,`battery` varchar(20)
+,`vibration` tinyint(1)
+,`satellites` int(11)
+,`last_gps_update` timestamp
+,`signal_age_seconds` bigint(21)
+,`has_valid_location` int(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `zone_settings`
+--
+
+CREATE TABLE `zone_settings` (
+  `id` int(11) NOT NULL,
+  `setting_key` varchar(50) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `zone_settings`
+--
+
+INSERT INTO `zone_settings` (`id`, `setting_key`, `setting_value`, `created_at`, `updated_at`) VALUES
+(1, 'perimeter_points', '[{\"lat\":11.300721963480326,\"lng\":123.73008728027345},{\"lat\":11.294746071242566,\"lng\":123.74115943908693},{\"lat\":11.285824084990832,\"lng\":123.74854087829591},{\"lat\":11.26730587037799,\"lng\":123.75617980957033},{\"lat\":11.243398775762556,\"lng\":123.76064300537111},{\"lat\":11.246766092270715,\"lng\":123.70124816894533}]', '2026-08-25 08:25:14', '2026-08-25 15:58:11'),
+(4, 'geofence_state_11', '{\"status\":\"outside\",\"at\":\"2026-08-25 11:06:51\",\"lat\":10.308216,\"lng\":123.906158}', '2026-08-25 09:06:51', '2026-08-25 09:06:51');
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `view_active_riders`
+--
+DROP TABLE IF EXISTS `view_active_riders`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_active_riders`  AS SELECT `u`.`id` AS `rider_id`, `u`.`fullname` AS `fullname`, `u`.`ebike_id` AS `ebike_id`, `u`.`is_online` AS `is_online`, `u`.`last_online_at` AS `last_online_at`, `u`.`online_source` AS `online_source`, `d`.`device_id` AS `device_id`, `d`.`device_type` AS `device_type`, `d`.`is_active` AS `device_active`, `d`.`last_seen_at` AS `device_last_seen`, `g`.`latitude` AS `latitude`, `g`.`longitude` AS `longitude`, `g`.`speed` AS `speed`, `g`.`battery` AS `battery`, `g`.`vibration` AS `vibration`, `g`.`satellites` AS `satellites`, `g`.`created_at` AS `last_gps_update`, timestampdiff(SECOND,`g`.`created_at`,current_timestamp()) AS `signal_age_seconds`, CASE WHEN `g`.`latitude` is not null AND `g`.`longitude` is not null AND `g`.`latitude` <> 0 AND `g`.`longitude` <> 0 AND timestampdiff(SECOND,`g`.`created_at`,current_timestamp()) < 120 THEN 1 ELSE 0 END AS `has_valid_location` FROM ((`users` `u` left join `devices` `d` on(`d`.`rider_id` = `u`.`id`)) left join (select `g2`.`rider_id` AS `rider_id`,`g2`.`latitude` AS `latitude`,`g2`.`longitude` AS `longitude`,`g2`.`speed` AS `speed`,`g2`.`battery` AS `battery`,`g2`.`vibration` AS `vibration`,`g2`.`satellites` AS `satellites`,`g2`.`created_at` AS `created_at` from (`gps_logs` `g2` join (select `gps_logs`.`rider_id` AS `rider_id`,max(`gps_logs`.`id`) AS `max_id` from `gps_logs` group by `gps_logs`.`rider_id`) `latest` on(`g2`.`id` = `latest`.`max_id`))) `g` on(`g`.`rider_id` = `u`.`id`)) WHERE `u`.`role` = 'rider' AND `u`.`status` = 'approved' ;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `devices`
+--
+ALTER TABLE `devices`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_devices_rider` (`rider_id`),
+  ADD UNIQUE KEY `uq_devices_device_id` (`device_id`);
+
+--
+-- Indexes for table `device_status`
+--
+ALTER TABLE `device_status`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_device_status_device` (`device_id`),
+  ADD KEY `idx_device_status_rider` (`rider_id`);
+
+--
+-- Indexes for table `gps_locations`
+--
+ALTER TABLE `gps_locations`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `gps_logs`
+--
+ALTER TABLE `gps_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_rider_created` (`rider_id`,`created_at`),
+  ADD KEY `idx_device_created` (`device_type`,`created_at`);
+
+--
+-- Indexes for table `gps_signal_logs`
+--
+ALTER TABLE `gps_signal_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_signal_device` (`device_id`,`created_at`),
+  ADD KEY `idx_signal_rider` (`rider_id`,`created_at`);
+
+--
+-- Indexes for table `map_alerts`
+--
+ALTER TABLE `map_alerts`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user` (`user_id`,`user_type`),
+  ADD KEY `idx_read` (`is_read`);
+
+--
+-- Indexes for table `rental_logs`
+--
+ALTER TABLE `rental_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_rental` (`rental_session_id`);
+
+--
+-- Indexes for table `rental_sessions`
+--
+ALTER TABLE `rental_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_rider` (`rider_id`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  ADD PRIMARY KEY (`setting_key`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `uq_users_ebike_id` (`ebike_id`),
+  ADD KEY `idx_rider_online` (`is_online`,`last_online_at`),
+  ADD KEY `idx_online_status` (`is_online`,`last_online_at`);
+
+--
+-- Indexes for table `zone_settings`
+--
+ALTER TABLE `zone_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `setting_key` (`setting_key`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `devices`
+--
+ALTER TABLE `devices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `device_status`
+--
+ALTER TABLE `device_status`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `gps_locations`
+--
+ALTER TABLE `gps_locations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `gps_logs`
+--
+ALTER TABLE `gps_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1177;
+
+--
+-- AUTO_INCREMENT for table `gps_signal_logs`
+--
+ALTER TABLE `gps_signal_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `map_alerts`
+--
+ALTER TABLE `map_alerts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `rental_logs`
+--
+ALTER TABLE `rental_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `rental_sessions`
+--
+ALTER TABLE `rental_sessions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `zone_settings`
+--
+ALTER TABLE `zone_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `devices`
+--
+ALTER TABLE `devices`
+  ADD CONSTRAINT `fk_devices_rider` FOREIGN KEY (`rider_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `device_status`
+--
+ALTER TABLE `device_status`
+  ADD CONSTRAINT `fk_device_status_device` FOREIGN KEY (`device_id`) REFERENCES `devices` (`device_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_device_status_rider` FOREIGN KEY (`rider_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `rental_logs`
+--
+ALTER TABLE `rental_logs`
+  ADD CONSTRAINT `rental_logs_ibfk_1` FOREIGN KEY (`rental_session_id`) REFERENCES `rental_sessions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `rental_sessions`
+--
+ALTER TABLE `rental_sessions`
+  ADD CONSTRAINT `rental_sessions_ibfk_1` FOREIGN KEY (`rider_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
